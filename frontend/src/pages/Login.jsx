@@ -9,7 +9,7 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-  const [submitting, setSubmitting] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
   async function handleSubmit(e) {
     e.preventDefault();

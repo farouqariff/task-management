@@ -1,0 +1,46 @@
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: tally-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-devpassword}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-task_management}
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p${MYSQL_ROOT_PASSWORD:-devpassword}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build: ./backend
+    container_name: tally-backend
+    restart: unless-stopped
+    environment:
+      SECRET_KEY: ${SECRET_KEY:-change-me}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-change-me-jwt}
+      DATABASE_URL: mysql+pymysql://root:${MYSQL_ROOT_PASSWORD:-devpassword}@mysql:3306/${MYSQL_DATABASE:-task_management}
+    ports:
+      - "5000:5000"
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:5000}
+    container_name: tally-frontend
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    depends_on:
+      - backend
+
+volumes:
+  mysql_data:

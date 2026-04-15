@@ -17,4 +17,5 @@ class Task(db.Model):
             "description": self.description,
             "status": self.status,
             "user_id": self.user_id,
+            "user_email": self.user.email if self.user else None,
         }
