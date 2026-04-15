@@ -19,8 +19,10 @@ def create_app(config_class=Config):
 
     from app import models  # noqa: F401 — register models with SQLAlchemy
     from app.routes.auth import bp as auth_bp
+    from app.routes.tasks import bp as tasks_bp
 
     app.register_blueprint(auth_bp)
+    app.register_blueprint(tasks_bp)
 
     with app.app_context():
         db.create_all()
