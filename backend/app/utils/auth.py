@@ -1,0 +1,77 @@
+from functools import wraps
+from flask import jsonify, request
+from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
+
+from app import db
+from app.models.user import User
+from app.models.project import Project
+from app.models.task import Task
+from app.models.audit_log import AuditLog
+
+
+def current_user() -> User | None:
+    uid = get_jwt_identity()
+    if uid is None:
+        return None
+    return User.query.get(int(uid))
+
+
+def admin_required(fn):
+    @wraps(fn)
+    @jwt_required()
+    def wrapper(*args, **kwargs):
+        if not get_jwt().get("is_admin"):
+            return jsonify({"error": "admin only"}), 403
+        return fn(*args, **kwargs)
+    return wrapper
+
+
+def permission_required(permission_name: str):
+    def decorator(fn):
+        @wraps(fn)
+        @jwt_required()
+        def wrapper(*args, **kwargs):
+            user = current_user()
+            if user is None:
+                return jsonify({"error": "user not found"}), 401
+            if not user.has_permission(permission_name):
+                return jsonify({"error": f"missing permission: {permission_name}"}), 403
+            return fn(*args, **kwargs)
+        return wrapper
+    return decorator
+
+
+def can_view_project(user: User, project: Project) -> bool:
+    return user.is_admin or project.created_by == user.id or project.has_member(user.id)
+
+
+def can_manage_project(user: User, project: Project) -> bool:
+    """Leaders of the project, the creator, or an admin."""
+    if user.is_admin or project.created_by == user.id:
+        return True
+    return user.id in project.leader_ids()
+
+
+def can_view_task(user: User, task: Task) -> bool:
+    if user.is_admin or task.created_by == user.id or task.has_assignee(user.id):
+        return True
+    return task.project is not None and task.project.has_member(user.id)
+
+
+def can_manage_task(user: User, task: Task) -> bool:
+    if user.is_admin or task.created_by == user.id:
+        return True
+    return task.project is not None and user.id in task.project.leader_ids()
+
+
+def write_audit(action: str, resource_type: str, resource_id: int | None, changes: dict | None = None) -> None:
+    uid = get_jwt_identity()
+    log = AuditLog(
+        user_id=int(uid) if uid is not None else None,
+        action=action,
+        resource_type=resource_type,
+        resource_id=resource_id,
+        changes=changes,
+        ip_address=request.remote_addr,
+    )
+    db.session.add(log)

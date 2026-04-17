@@ -3,30 +3,39 @@ from flask_jwt_extended import create_access_token
 from sqlalchemy.exc import IntegrityError
 
 from app import db
-from app.models import User
+from app.models.user import User
+from app.models.role import Role
+from app.models.user_role import UserRole
+from app.schemas.user_schema import UserRegisterSchema, UserLoginSchema
+from app.utils.auth import write_audit
 
 bp = Blueprint("auth", __name__, url_prefix="/auth")
 
-ALLOWED_ROLES = {"user", "admin"}
+register_schema = UserRegisterSchema()
+login_schema = UserLoginSchema()
 
 
 @bp.post("/register")
 def register():
-    data = request.get_json(silent=True) or {}
-    email = (data.get("email") or "").strip().lower()
-    password = data.get("password") or ""
-    role = (data.get("role") or "user").strip().lower()
+    data = register_schema.load(request.get_json(silent=True) or {})
 
-    if not email or not password:
-        return jsonify({"error": "email and password are required"}), 400
-    if role not in ALLOWED_ROLES:
-        return jsonify({"error": f"role must be one of {sorted(ALLOWED_ROLES)}"}), 400
-
-    user = User(email=email, role=role)
-    user.set_password(password)
+    user = User(
+        first_name=data["first_name"],
+        last_name=data["last_name"],
+        email=data["email"],
+        is_admin=False,
+    )
+    user.set_password(data["password"])
 
     try:
         db.session.add(user)
+        db.session.flush()
+
+        default_role = Role.query.filter_by(name="user").first()
+        if default_role:
+            db.session.add(UserRole(user_id=user.id, role_id=default_role.id))
+
+        write_audit("create", "user", user.id, {"email": user.email})
         db.session.commit()
     except IntegrityError:
         db.session.rollback()
@@ -37,19 +46,14 @@ def register():
 
 @bp.post("/login")
 def login():
-    data = request.get_json(silent=True) or {}
-    email = (data.get("email") or "").strip().lower()
-    password = data.get("password") or ""
+    data = login_schema.load(request.get_json(silent=True) or {})
 
-    if not email or not password:
-        return jsonify({"error": "email and password are required"}), 400
-
-    user = User.query.filter_by(email=email).first()
-    if not user or not user.check_password(password):
+    user = User.query.filter_by(email=data["email"]).first()
+    if not user or not user.check_password(data["password"]):
         return jsonify({"error": "invalid credentials"}), 401
 
     token = create_access_token(
         identity=str(user.id),
-        additional_claims={"role": user.role, "email": user.email},
+        additional_claims={"email": user.email, "is_admin": user.is_admin},
     )
-    return jsonify({"access_token": token}), 200
+    return jsonify({"access_token": token, "user": user.to_dict()}), 200

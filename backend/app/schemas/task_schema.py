@@ -1,9 +1,22 @@
-from app import ma
-from marshmallow import fields, validates, ValidationError
-from app.models.task import Task
+from marshmallow import fields, validate
 
-ALLOWED_STATUSES = {"pending", "in_progress", "completed"}
-ALLOWED_PRIORITIES = {"low", "medium", "high"}
+from app import ma, db
+from app.models.task import Task
+from app.models.task_assignee import TaskAssignee
+
+ALLOWED_STATUSES = ("pending", "in_progress", "completed")
+ALLOWED_PRIORITIES = ("low", "medium", "high")
+
+
+class TaskAssigneeSchema(ma.SQLAlchemyAutoSchema):
+    class Meta:
+        model = TaskAssignee
+        include_fk = True
+        sqla_session = db.session
+        dump_only = ("id", "assigned_at")
+
+    user_email = fields.String(attribute="user.email", dump_only=True)
+    user_full_name = fields.String(attribute="user.full_name", dump_only=True)
 
 
 class TaskSchema(ma.SQLAlchemyAutoSchema):
@@ -11,20 +24,23 @@ class TaskSchema(ma.SQLAlchemyAutoSchema):
         model = Task
         load_instance = True
         include_fk = True
+        sqla_session = db.session
+        dump_only = ("id", "created_by", "created_at", "updated_at")
 
-    # format datetime for frontend
-    created_at = fields.DateTime(dump_only=True, format="iso")
+    status = ma.auto_field(validate=validate.OneOf(ALLOWED_STATUSES))
+    priority = ma.auto_field(validate=validate.OneOf(ALLOWED_PRIORITIES))
     due_date = fields.DateTime(allow_none=True, format="iso")
 
-    # nested safe field
-    user_email = fields.String(attribute="user.email", dump_only=True)
+    creator_email = fields.String(attribute="creator.email", dump_only=True)
+    project_name = fields.String(attribute="project.name", dump_only=True)
+    assignees = fields.Nested(TaskAssigneeSchema, many=True, dump_only=True)
 
-    @validates("status")
-    def validate_status(self, value):
-        if value not in ALLOWED_STATUSES:
-            raise ValidationError(f"status must be one of {sorted(ALLOWED_STATUSES)}")
 
-    @validates("priority")
-    def validate_priority(self, value):
-        if value not in ALLOWED_PRIORITIES:
-            raise ValidationError(f"priority must be one of {sorted(ALLOWED_PRIORITIES)}")
+class TaskAssigneeUpdateSchema(ma.Schema):
+    """Limited schema used when an assignee updates a task they don't manage."""
+    status = fields.String(validate=validate.OneOf(ALLOWED_STATUSES))
+    priority = fields.String(validate=validate.OneOf(ALLOWED_PRIORITIES))
+
+
+class TaskAssigneeCreateSchema(ma.Schema):
+    user_id = fields.Integer(required=True, strict=True)

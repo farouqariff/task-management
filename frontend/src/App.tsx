@@ -4,7 +4,8 @@ import SignUp from "./pages/AuthPages/SignUp";
 import ResetPassword from "./pages/AuthPages/ResetPassword";
 import NewPassword from "./pages/AuthPages/NewPassword";
 import NotFound from "./pages/OtherPage/NotFound";
-import UserProfiles from "./pages/UserProfiles";
+import UserProfiles from "./pages/Profile";
+import Project from "./pages/Project";
 import Videos from "./pages/UiElements/Videos";
 import Images from "./pages/UiElements/Images";
 import Alerts from "./pages/UiElements/Alerts";
@@ -15,8 +16,11 @@ import LineChart from "./pages/Charts/LineChart";
 import BarChart from "./pages/Charts/BarChart";
 import Calendar from "./pages/Calendar";
 import BasicTables from "./pages/Tables/BasicTables";
+import User from "./pages/User";
 import FormElements from "./pages/Forms/FormElements";
 import Blank from "./pages/Blank";
+import Task from "./pages/MyTask";
+import TaskList from "./pages/TaskList";
 import AppLayout from "./layout/AppLayout";
 import { ScrollToTop } from "./components/common/ScrollToTop";
 import Home from "./pages/Dashboard/Home";
@@ -32,7 +36,10 @@ export default function App() {
             <Route index path="/" element={<Home />} />
 
             {/* Others Page */}
+            <Route path="/tasks" element={<Task />} />
+            <Route path="/task-list" element={<TaskList />} />
             <Route path="/profile" element={<UserProfiles />} />
+            <Route path="/project" element={<Project />} />
             <Route path="/calendar" element={<Calendar />} />
             <Route path="/blank" element={<Blank />} />
 
@@ -41,6 +48,7 @@ export default function App() {
 
             {/* Tables */}
             <Route path="/basic-tables" element={<BasicTables />} />
+            <Route path="/users" element={<User />} />
 
             {/* Ui Elements */}
             <Route path="/alerts" element={<Alerts />} />
