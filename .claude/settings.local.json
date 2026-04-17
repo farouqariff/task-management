@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run *)",
+      "Bash(curl -s -o /dev/null -w \"HTTP %{http_code}\\\\n\" http://localhost:5173/)",
+      "Bash(curl -s \"http://localhost:5175/login\" -o /dev/null -w \"HTTP %{http_code}\\\\n\")",
+      "Bash(curl -s \"http://localhost:5175/src/main.jsx\" -o /dev/null -w \"main.jsx HTTP %{http_code}\\\\n\")",
+      "Bash(curl -s \"http://localhost:5175/src/App.jsx\" -o /dev/null -w \"App.jsx %{http_code}\\\\n\")",
+      "Bash(curl -s \"http://localhost:5175/src/pages/AuthPages/Login.jsx\" -o /dev/null -w \"Login %{http_code}\\\\n\")",
+      "Bash(curl -s \"http://localhost:5175/src/layout/AppLayout.tsx\" -o /dev/null -w \"AppLayout %{http_code}\\\\n\")",
+      "Bash(curl -s \"http://localhost:5175/src/components/auth/SignInForm.tsx\" -o /dev/null -w \"SignIn %{http_code}\\\\n\")",
+      "Bash(curl -s -o /dev/null -w \"Backend /auth/login: HTTP %{http_code} \\(%{time_total}s\\)\\\\n\" -X POST -H \"Content-Type: application/json\" -d '{\"email\":\"alice@example.com\",\"password\":\"s3cret123\"}' http://127.0.0.1:5000/auth/login --max-time 5)",
+      "Bash(netstat -ano)",
+      "Bash(curl -s -X POST -H \"Content-Type: application/json\" -d '{\"email\":\"alice@example.com\",\"password\":\"s3cret123\"}' http://127.0.0.1:5000/auth/login --max-time 5)",
+      "Bash(curl -s -X POST -H \"Content-Type: application/json\" -d '{\"email\":\"newtest@example.com\",\"password\":\"test123\"}' http://127.0.0.1:5000/auth/register --max-time 5)",
+      "Bash(curl -s -o /dev/null -w \"Probe localhost:3306 %{http_code}\\\\n\" --connect-timeout 2 http://localhost:3306)",
+      "Bash(curl -s -X POST -H \"Content-Type: application/json\" -H \"Origin: http://localhost:5173\" -d '{\"email\":\"newtest2@example.com\",\"password\":\"test1234\"}' http://127.0.0.1:5000/auth/register --max-time 5 -D -)",
+      "Bash(curl -s -o /dev/null -w \"3306 IPv4: %{http_code} \\(%{time_total}s\\)\\\\n\" --connect-timeout 3 telnet://127.0.0.1:3306)",
+      "Bash(curl -s -o /dev/null -w \"3306 IPv6: %{http_code} \\(%{time_total}s\\)\\\\n\" --connect-timeout 3 telnet://[::1]:3306)"
+    ]
+  }
+}
