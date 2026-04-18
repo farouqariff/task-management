@@ -16,7 +16,7 @@ interface CalendarEvent extends EventInput {
 
 const Calendar: React.FC = () => {
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(
-    null,
+    null
   );
   const [eventTitle, setEventTitle] = useState("");
   const [eventStartDate, setEventStartDate] = useState("");
@@ -88,8 +88,8 @@ const Calendar: React.FC = () => {
                 end: eventEndDate,
                 extendedProps: { calendar: eventLevel },
               }
-            : event,
-        ),
+            : event
+        )
       );
     } else {
       // Add new event
@@ -268,7 +268,6 @@ const Calendar: React.FC = () => {
   );
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const renderEventContent = (eventInfo: any) => {
   const colorClass = `fc-bg-${eventInfo.event.extendedProps.calendar.toLowerCase()}`;
   return (

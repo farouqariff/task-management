@@ -4,18 +4,18 @@ import { Link, useLocation } from "react-router";
 // Assume these icons are imported from an icon library
 import {
   BoxCubeIcon,
-  // CalenderIcon,
+  CalenderIcon,
   ChevronDownIcon,
   GridIcon,
   HorizontaLDots,
   ListIcon,
   PageIcon,
   PieChartIcon,
-  PlugInIcon,
   TableIcon,
+  TaskIcon,
   UserCircleIcon,
-  MyTaskIcon,
-  ProjectIcon,
+  LogIcon,
+  UsersIcon,
 } from "../icons";
 import { useSidebar } from "../context/SidebarContext";
 
@@ -30,37 +30,42 @@ const navItems: NavItem[] = [
   {
     icon: <GridIcon />,
     name: "Dashboard",
-    subItems: [{ name: "Ecommerce", path: "/", pro: false }],
+    path: "/",
   },
-  // {
-  //   icon: <CalenderIcon />,
-  //   name: "Calendar",
-  //   path: "/calendar",
-  // },
   {
-    icon: <MyTaskIcon />,
-    name: "My Task",
+    icon: <CalenderIcon />,
+    name: "Calendar",
+    path: "/calendar",
+  },
+  {
+    icon: <TaskIcon />,
+    name: "Task",
     path: "/tasks",
   },
   {
-    icon: <ProjectIcon />,
-    name: "Project",
-    path: "/project",
+    icon: <LogIcon />,
+    name: "Log",
+    path: "/log",
   },
   {
-    icon: <TableIcon />,
+    icon: <UsersIcon />,
     name: "Users",
     path: "/users",
   },
   {
     icon: <UserCircleIcon />,
-    name: "Profile",
+    name: "User Profile",
     path: "/profile",
   },
   {
     name: "Forms",
     icon: <ListIcon />,
     subItems: [{ name: "Form Elements", path: "/form-elements", pro: false }],
+  },
+  {
+    name: "Tables",
+    icon: <TableIcon />,
+    subItems: [{ name: "Basic Tables", path: "/basic-tables", pro: false }],
   },
   {
     name: "Pages",
@@ -73,14 +78,6 @@ const navItems: NavItem[] = [
 ];
 
 const othersItems: NavItem[] = [
-  {
-    icon: <PieChartIcon />,
-    name: "Personal",
-    subItems: [
-      { name: "Line Chart", path: "/line-chart", pro: false },
-      { name: "Bar Chart", path: "/bar-chart", pro: false },
-    ],
-  },
   {
     icon: <PieChartIcon />,
     name: "Charts",
@@ -99,14 +96,6 @@ const othersItems: NavItem[] = [
       { name: "Buttons", path: "/buttons", pro: false },
       { name: "Images", path: "/images", pro: false },
       { name: "Videos", path: "/videos", pro: false },
-    ],
-  },
-  {
-    icon: <PlugInIcon />,
-    name: "Authentication",
-    subItems: [
-      { name: "Sign In", path: "/signin", pro: false },
-      { name: "Sign Up", path: "/signup", pro: false },
     ],
   },
 ];
@@ -378,7 +367,7 @@ const AppSidebar: React.FC = () => {
                 }`}
               >
                 {isExpanded || isHovered || isMobileOpen ? (
-                  "Projects"
+                  "Others"
                 ) : (
                   <HorizontaLDots />
                 )}
