@@ -57,6 +57,8 @@ import { ReactComponent as ErrorHexaIcon } from "./info-hexa.svg?react";
 import { ReactComponent as LogIcon } from "./log.svg?react";
 import { ReactComponent as UsersIcon } from "./users.svg?react";
 import { ReactComponent as AddIcon } from "./add.svg?react";
+import { ReactComponent as LoadingIcon } from "./loading.svg?react";
+import { ReactComponent as ProjectIcon } from "./project.svg?react";
 
 export {
   ErrorHexaIcon,
@@ -118,4 +120,6 @@ export {
   LogIcon,
   UsersIcon,
   AddIcon,
+  LoadingIcon,
+  ProjectIcon,
 };

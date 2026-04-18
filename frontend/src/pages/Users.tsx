@@ -1,382 +1,51 @@
+import { useEffect, useState } from "react";
 import PageBreadcrumb from "../components/common/PageBreadCrumb";
 import PageMeta from "../components/common/PageMeta";
 import DataTable, { Column } from "../components/tables/DataTable/DataTable";
+import { usersApi, type UserItem } from "../services/api";
+import { LoadingIcon } from "../icons";
+import { Modal } from "../components/ui/modal";
+import { useModal } from "../hooks/useModal";
+import Button from "../components/ui/button/Button";
+import Input from "../components/form/input/InputField";
+import Label from "../components/form/Label";
 
-interface UserRow {
-  id: number;
-  name: string;
-  position: string;
-  office: string;
-  age: number;
-  startDate: string;
-  startDateISO: string;
-  salary: number;
-}
-
-const salaryFormatter = new Intl.NumberFormat("en-US");
-
-const formatSalary = (salary: number) => `$${salaryFormatter.format(salary)}`;
-
-const usersData: UserRow[] = [
+const columns: Column<UserItem>[] = [
   {
-    id: 1,
-    name: "Abram Schleifer",
-    position: "Sales Assistant",
-    office: "Edinburgh",
-    age: 57,
-    startDate: "25 Apr, 2027",
-    startDateISO: "2027-04-25",
-    salary: 89500,
-  },
-  {
-    id: 2,
-    name: "Abram Schleifer",
-    position: "Sales Assistant",
-    office: "Edinburgh",
-    age: 57,
-    startDate: "25 Apr, 2027",
-    startDateISO: "2027-04-25",
-    salary: 89500,
-  },
-  {
-    id: 3,
-    name: "Abram Schleifer",
-    position: "Sales Assistant",
-    office: "Edinburgh",
-    age: 57,
-    startDate: "25 Apr, 2027",
-    startDateISO: "2027-04-25",
-    salary: 89500,
-  },
-  {
-    id: 4,
-    name: "Carla George",
-    position: "Sales Assistant",
-    office: "London",
-    age: 45,
-    startDate: "11 May, 2027",
-    startDateISO: "2027-05-11",
-    salary: 15500,
-  },
-  {
-    id: 5,
-    name: "Carla George",
-    position: "Sales Assistant",
-    office: "London",
-    age: 45,
-    startDate: "11 May, 2027",
-    startDateISO: "2027-05-11",
-    salary: 15500,
-  },
-  {
-    id: 6,
-    name: "Carla George",
-    position: "Sales Assistant",
-    office: "London",
-    age: 45,
-    startDate: "11 May, 2027",
-    startDateISO: "2027-05-11",
-    salary: 15500,
-  },
-  {
-    id: 7,
-    name: "Ekstrom Bothman",
-    position: "Sales Assistant",
-    office: "San Francisco",
-    age: 53,
-    startDate: "15 Nov, 2027",
-    startDateISO: "2027-11-15",
-    salary: 19200,
-  },
-  {
-    id: 8,
-    name: "Ekstrom Bothman",
-    position: "Sales Assistant",
-    office: "San Francisco",
-    age: 53,
-    startDate: "15 Nov, 2027",
-    startDateISO: "2027-11-15",
-    salary: 19200,
-  },
-  {
-    id: 9,
-    name: "Ekstrom Bothman",
-    position: "Sales Assistant",
-    office: "San Francisco",
-    age: 53,
-    startDate: "15 Nov, 2027",
-    startDateISO: "2027-11-15",
-    salary: 19200,
-  },
-  {
-    id: 10,
-    name: "Emery Culhane",
-    position: "Sales Assistant",
-    office: "New York",
-    age: 45,
-    startDate: "29 Jun, 2027",
-    startDateISO: "2027-06-29",
-    salary: 23500,
-  },
-  {
-    id: 11,
-    name: "Emery Culhane",
-    position: "Sales Assistant",
-    office: "New York",
-    age: 45,
-    startDate: "29 Jun, 2027",
-    startDateISO: "2027-06-29",
-    salary: 23500,
-  },
-  {
-    id: 12,
-    name: "Emery Culhane",
-    position: "Sales Assistant",
-    office: "New York",
-    age: 45,
-    startDate: "29 Jun, 2027",
-    startDateISO: "2027-06-29",
-    salary: 23500,
-  },
-  {
-    id: 13,
-    name: "Francesca Piper",
-    position: "Software Engineer",
-    office: "Tokyo",
-    age: 31,
-    startDate: "12 Feb, 2027",
-    startDateISO: "2027-02-12",
-    salary: 72400,
-  },
-  {
-    id: 14,
-    name: "Francesca Piper",
-    position: "Software Engineer",
-    office: "Tokyo",
-    age: 31,
-    startDate: "12 Feb, 2027",
-    startDateISO: "2027-02-12",
-    salary: 72400,
-  },
-  {
-    id: 15,
-    name: "Francesca Piper",
-    position: "Software Engineer",
-    office: "Tokyo",
-    age: 31,
-    startDate: "12 Feb, 2027",
-    startDateISO: "2027-02-12",
-    salary: 72400,
-  },
-  {
-    id: 16,
-    name: "Gemma Thornton",
-    position: "Marketing Lead",
-    office: "Berlin",
-    age: 38,
-    startDate: "03 Sep, 2027",
-    startDateISO: "2027-09-03",
-    salary: 61200,
-  },
-  {
-    id: 17,
-    name: "Gemma Thornton",
-    position: "Marketing Lead",
-    office: "Berlin",
-    age: 38,
-    startDate: "03 Sep, 2027",
-    startDateISO: "2027-09-03",
-    salary: 61200,
-  },
-  {
-    id: 18,
-    name: "Gemma Thornton",
-    position: "Marketing Lead",
-    office: "Berlin",
-    age: 38,
-    startDate: "03 Sep, 2027",
-    startDateISO: "2027-09-03",
-    salary: 61200,
-  },
-  {
-    id: 19,
-    name: "Harvey Morales",
-    position: "Product Designer",
-    office: "Sydney",
-    age: 29,
-    startDate: "18 Jan, 2027",
-    startDateISO: "2027-01-18",
-    salary: 54800,
-  },
-  {
-    id: 20,
-    name: "Harvey Morales",
-    position: "Product Designer",
-    office: "Sydney",
-    age: 29,
-    startDate: "18 Jan, 2027",
-    startDateISO: "2027-01-18",
-    salary: 54800,
-  },
-  {
-    id: 21,
-    name: "Harvey Morales",
-    position: "Product Designer",
-    office: "Sydney",
-    age: 29,
-    startDate: "18 Jan, 2027",
-    startDateISO: "2027-01-18",
-    salary: 54800,
-  },
-  {
-    id: 22,
-    name: "Isla Redmond",
-    position: "Finance Analyst",
-    office: "Toronto",
-    age: 41,
-    startDate: "07 Jul, 2027",
-    startDateISO: "2027-07-07",
-    salary: 48900,
-  },
-  {
-    id: 23,
-    name: "Isla Redmond",
-    position: "Finance Analyst",
-    office: "Toronto",
-    age: 41,
-    startDate: "07 Jul, 2027",
-    startDateISO: "2027-07-07",
-    salary: 48900,
-  },
-  {
-    id: 24,
-    name: "Isla Redmond",
-    position: "Finance Analyst",
-    office: "Toronto",
-    age: 41,
-    startDate: "07 Jul, 2027",
-    startDateISO: "2027-07-07",
-    salary: 48900,
-  },
-  {
-    id: 25,
-    name: "Jonah Reyes",
-    position: "QA Engineer",
-    office: "Singapore",
-    age: 34,
-    startDate: "22 Oct, 2027",
-    startDateISO: "2027-10-22",
-    salary: 42700,
-  },
-  {
-    id: 26,
-    name: "Jonah Reyes",
-    position: "QA Engineer",
-    office: "Singapore",
-    age: 34,
-    startDate: "22 Oct, 2027",
-    startDateISO: "2027-10-22",
-    salary: 42700,
-  },
-  {
-    id: 27,
-    name: "Jonah Reyes",
-    position: "QA Engineer",
-    office: "Singapore",
-    age: 34,
-    startDate: "22 Oct, 2027",
-    startDateISO: "2027-10-22",
-    salary: 42700,
-  },
-  {
-    id: 28,
-    name: "Kira Novak",
-    position: "HR Manager",
-    office: "Dublin",
-    age: 47,
-    startDate: "30 Mar, 2027",
-    startDateISO: "2027-03-30",
-    salary: 58300,
-  },
-  {
-    id: 29,
-    name: "Kira Novak",
-    position: "HR Manager",
-    office: "Dublin",
-    age: 47,
-    startDate: "30 Mar, 2027",
-    startDateISO: "2027-03-30",
-    salary: 58300,
-  },
-  {
-    id: 30,
-    name: "Kira Novak",
-    position: "HR Manager",
-    office: "Dublin",
-    age: 47,
-    startDate: "30 Mar, 2027",
-    startDateISO: "2027-03-30",
-    salary: 58300,
-  },
-];
-
-const columns: Column<UserRow>[] = [
-  {
-    key: "name",
-    header: "User",
+    key: "full_name",
+    header: "Full Name",
     sortable: true,
-    accessor: (row) => row.name,
+    accessor: (row) => row.full_name,
     render: (row) => (
       <span className="font-medium text-gray-800 dark:text-white/90">
-        {row.name}
+        {row.full_name}
       </span>
     ),
   },
   {
-    key: "position",
-    header: "Position",
+    key: "email",
+    header: "Email",
     sortable: true,
-    accessor: (row) => row.position,
-  },
-  {
-    key: "office",
-    header: "Office",
-    sortable: true,
-    accessor: (row) => row.office,
-  },
-  {
-    key: "age",
-    header: "Age",
-    sortable: true,
-    accessor: (row) => row.age,
-  },
-  {
-    key: "startDate",
-    header: "Start date",
-    sortable: true,
-    accessor: (row) => row.startDateISO,
-    render: (row) => row.startDate,
-  },
-  {
-    key: "salary",
-    header: "Salary",
-    sortable: true,
-    accessor: (row) => row.salary,
-    render: (row) => formatSalary(row.salary),
+    accessor: (row) => row.email,
   },
 ];
 
+const searchUser = (row: UserItem) => `${row.full_name} ${row.email}`;
+
 export default function Users() {
-  const handleEdit = (row: UserRow) => {
-    console.log("edit user", row.id);
-  };
+  const [users, setUsers] = useState<UserItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { isOpen, openModal, closeModal } = useModal();
 
-  const handleDelete = (row: UserRow) => {
-    console.log("delete user", row.id);
-  };
+  useEffect(() => {
+    usersApi.list().then((result) => {
+      if (result.data) setUsers(result.data);
+      setLoading(false);
+    });
+  }, []);
 
-  const handleAddUser = () => {
-    console.log("add new user");
+  const handleSave = () => {
+    closeModal();
   };
 
   return (
@@ -386,17 +55,65 @@ export default function Users() {
         description="Users directory — search, sort, and manage team members."
       />
       <PageBreadcrumb pageTitle="Users" />
-      <DataTable<UserRow>
-        data={usersData}
-        columns={columns}
-        searchable={(row) =>
-          `${row.name} ${row.position} ${row.office} ${row.age} ${row.startDate} ${row.salary}`
-        }
-        onEdit={handleEdit}
-        onDelete={handleDelete}
-        addButtonLabel="Add New User"
-        onAdd={handleAddUser}
-      />
+      {loading ? (
+        <div className="flex items-center justify-center py-20">
+          <LoadingIcon className="size-150 animate-spin text-brand-500" />
+        </div>
+      ) : (
+        <DataTable<UserItem>
+          data={users}
+          columns={columns}
+          searchable={searchUser}
+          onEdit={(row) => console.log("edit user", row.id)}
+          onDelete={(row) => console.log("delete user", row.id)}
+          addButtonLabel="Add New User"
+          onAdd={openModal}
+        />
+      )}
+
+      <Modal
+        isOpen={isOpen}
+        onClose={closeModal}
+        className="max-w-[584px] m-4"
+      >
+        <div className="relative w-full rounded-3xl bg-white p-6 dark:bg-gray-900">
+          <h4 className="mb-6 text-lg font-semibold text-gray-800 dark:text-white/90">
+            Personal Information
+          </h4>
+          <form className="flex flex-col">
+            <div className="grid grid-cols-1 gap-x-5 gap-y-5 sm:grid-cols-2">
+              <div>
+                <Label>First Name</Label>
+                <Input type="text" placeholder="Musharof" />
+              </div>
+              <div>
+                <Label>Last Name</Label>
+                <Input type="text" placeholder="Chowdhury" />
+              </div>
+              <div>
+                <Label>Email Address</Label>
+                <Input type="text" placeholder="randomuser@pimjo.com" />
+              </div>
+              <div>
+                <Label>Phone</Label>
+                <Input type="text" placeholder="+09 363 398 46" />
+              </div>
+              <div className="sm:col-span-2">
+                <Label>Bio</Label>
+                <Input type="text" placeholder="Team Manager" />
+              </div>
+            </div>
+            <div className="mt-6 flex items-center justify-end gap-3">
+              <Button size="sm" variant="outline" onClick={closeModal}>
+                Close
+              </Button>
+              <Button size="sm" onClick={handleSave}>
+                Save Changes
+              </Button>
+            </div>
+          </form>
+        </div>
+      </Modal>
     </>
   );
 }

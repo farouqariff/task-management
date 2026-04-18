@@ -36,6 +36,11 @@ function PublicRoute({ children }: { children: ReactNode }) {
   return isAuthenticated ? <Navigate to="/" replace /> : <>{children}</>;
 }
 
+function AdminRoute({ children }: { children: ReactNode }) {
+  const { user } = useAuth();
+  return user?.is_admin ? <>{children}</> : <Navigate to="/error-401" replace />;
+}
+
 export default function App() {
   return (
     <AuthProvider>
@@ -53,8 +58,8 @@ export default function App() {
             <Route index path="/" element={<Home />} />
 
             {/* Admin Pages */}
-            <Route path="log" element={<Log />} />
-            <Route path="/users" element={<Users />} />
+            <Route path="/log" element={<AdminRoute><Log /></AdminRoute>} />
+            <Route path="/users" element={<AdminRoute><Users /></AdminRoute>} />
 
             {/* Task */}
             <Route path="/tasks" element={<Task />} />
@@ -98,6 +103,7 @@ export default function App() {
           <Route path="/new-password" element={<NewPassword />} />
 
           {/* Fallback */}
+          <Route path="/error-401" element={<NotFound />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </Router>

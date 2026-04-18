@@ -1,4 +1,4 @@
-import { ReactNode, useMemo, useState } from "react";
+import { ReactNode, useCallback, useMemo, useState } from "react";
 import {
   Table,
   TableBody,
@@ -75,21 +75,24 @@ export default function DataTable<T>({
     return copy;
   }, [filtered, sortKey, sortDir, columns]);
 
-  const totalEntries = sorted.length;
-  const totalPages = Math.max(1, Math.ceil(totalEntries / pageSize));
-  const safePage = Math.min(currentPage, totalPages);
-  const startIdx = (safePage - 1) * pageSize;
-  const endIdx = Math.min(startIdx + pageSize, totalEntries);
-  const paged = sorted.slice(startIdx, endIdx);
+  const { totalEntries, totalPages, safePage, startIdx, endIdx, paged } = useMemo(() => {
+    const totalEntries = sorted.length;
+    const totalPages = Math.max(1, Math.ceil(totalEntries / pageSize));
+    const safePage = Math.min(currentPage, totalPages);
+    const startIdx = (safePage - 1) * pageSize;
+    const endIdx = Math.min(startIdx + pageSize, totalEntries);
+    const paged = sorted.slice(startIdx, endIdx);
+    return { totalEntries, totalPages, safePage, startIdx, endIdx, paged };
+  }, [sorted, pageSize, currentPage]);
 
-  const toggleSort = (key: string) => {
+  const toggleSort = useCallback((key: string) => {
     if (sortKey === key) {
-      setSortDir(sortDir === "asc" ? "desc" : "asc");
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
     } else {
       setSortKey(key);
       setSortDir("asc");
     }
-  };
+  }, [sortKey]);
 
   const pageNumbers = useMemo(() => {
     return Array.from({ length: totalPages }, (_, i) => i + 1);

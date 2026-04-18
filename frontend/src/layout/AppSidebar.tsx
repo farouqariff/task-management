@@ -18,6 +18,7 @@ import {
   UsersIcon,
 } from "../icons";
 import { useSidebar } from "../context/SidebarContext";
+import { useAuth } from "../context/AuthContext";
 
 type NavItem = {
   name: string;
@@ -102,6 +103,11 @@ const othersItems: NavItem[] = [
 
 const AppSidebar: React.FC = () => {
   const { isExpanded, isMobileOpen, isHovered, setIsHovered } = useSidebar();
+  const { user } = useAuth();
+  const filteredNavItems = navItems.filter(
+    (item) =>
+      (item.path !== "/users" && item.path !== "/log") || user?.is_admin,
+  );
   const location = useLocation();
 
   const [openSubmenu, setOpenSubmenu] = useState<{
@@ -356,7 +362,7 @@ const AppSidebar: React.FC = () => {
                   <HorizontaLDots className="size-6" />
                 )}
               </h2>
-              {renderMenuItems(navItems, "main")}
+              {renderMenuItems(filteredNavItems, "main")}
             </div>
             <div className="">
               <h2
