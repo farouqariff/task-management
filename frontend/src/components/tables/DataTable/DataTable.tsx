@@ -7,9 +7,9 @@ import {
   TableRow,
 } from "../../ui/table";
 import {
+  AddIcon,
   AngleDownIcon,
   AngleUpIcon,
-  BoxIcon,
   PencilIcon,
   TrashBinIcon,
 } from "../../../icons";
@@ -160,7 +160,7 @@ export default function DataTable<T>({
             <Button
               size="sm"
               variant="primary"
-              endIcon={<BoxIcon className="size-5" />}
+              endIcon={<AddIcon className="size-5" />}
               onClick={onAdd}
             >
               {addButtonLabel}

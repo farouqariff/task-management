@@ -35,7 +35,7 @@ def register():
         if default_role:
             db.session.add(UserRole(user_id=user.id, role_id=default_role.id))
 
-        write_audit("create", "user", user.id, {"email": user.email})
+        write_audit("create", "user", user.id, {"email": user.email}, actor_id=user.id)
         db.session.commit()
     except IntegrityError:
         db.session.rollback()
