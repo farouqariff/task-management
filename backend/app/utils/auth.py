@@ -26,21 +26,6 @@ def admin_required(fn):
     return wrapper
 
 
-def permission_required(permission_name: str):
-    def decorator(fn):
-        @wraps(fn)
-        @jwt_required()
-        def wrapper(*args, **kwargs):
-            user = current_user()
-            if user is None:
-                return jsonify({"error": "user not found"}), 401
-            if not user.has_permission(permission_name):
-                return jsonify({"error": f"missing permission: {permission_name}"}), 403
-            return fn(*args, **kwargs)
-        return wrapper
-    return decorator
-
-
 def can_view_project(user: User, project: Project) -> bool:
     return user.is_admin or project.created_by == user.id or project.has_member(user.id)
 

@@ -17,7 +17,11 @@ update_schema = UserUpdateSchema()
 @bp.get("")
 @admin_required
 def list_users():
-    users = User.query.order_by(User.id.asc()).all()
+    search = request.args.get("search", "").strip()
+    query = User.query
+    if search:
+        query = query.filter(User.email.ilike(f"%{search}%"))
+    users = query.order_by(User.id.asc()).all()
     return jsonify(users_schema.dump(users)), 200
 
 

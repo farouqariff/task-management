@@ -53,15 +53,24 @@ def create_project():
     me_ = current_user()
     if not me_:
         return jsonify({"error": "user not found"}), 404
+    if not me_.is_admin:
+        return jsonify({"error": "forbidden"}), 403
 
-    project = project_schema.load(request.get_json(silent=True) or {})
+    payload = request.get_json(silent=True) or {}
+    leader_id = payload.get("leader_id")
+    if not leader_id:
+        return jsonify({"error": "leader_id is required"}), 400
+    if not User.query.get(leader_id):
+        return jsonify({"error": "leader user not found"}), 404
+
+    project = project_schema.load({"name": payload.get("name")})
     project.created_by = me_.id
 
     db.session.add(project)
     db.session.flush()
-    db.session.add(ProjectMember(project_id=project.id, user_id=me_.id, role="leader"))
+    db.session.add(ProjectMember(project_id=project.id, user_id=leader_id, role="leader"))
 
-    write_audit("create", "project", project.id, {"name": project.name})
+    write_audit("create", "project", project.id, {"name": project.name, "leader_id": leader_id})
     db.session.commit()
     return jsonify(project_schema.dump(project)), 201
 

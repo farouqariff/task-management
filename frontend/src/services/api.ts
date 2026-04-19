@@ -16,6 +16,12 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<ApiR
   try {
     const res = await fetch(`${BASE_URL}${path}`, { ...options, headers });
     const json = await res.json().catch(() => ({}));
+    if (res.status === 401) {
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      window.location.href = "/signin";
+      return { error: "Session expired" };
+    }
     if (!res.ok) {
       return { error: (json as { error?: string; msg?: string }).error ?? (json as { msg?: string }).msg ?? "Something went wrong" };
     }
@@ -43,6 +49,7 @@ export interface UserItem {
 
 export const usersApi = {
   list: () => request<UserItem[]>("/users"),
+  search: (query: string) => request<UserItem[]>(`/users?search=${encodeURIComponent(query)}`),
 };
 
 export interface AuditLogItem {
@@ -68,6 +75,21 @@ export interface AuditLogResponse {
 export const auditApi = {
   list: (page = 1, per_page = 50) =>
     request<AuditLogResponse>(`/audit?page=${page}&per_page=${per_page}`),
+};
+
+export interface ProjectItem {
+  id: number;
+  name: string;
+  created_by: number;
+  created_at: string;
+}
+
+export const projectsApi = {
+  create: (name: string, leader_id: number) =>
+    request<ProjectItem>("/projects", {
+      method: "POST",
+      body: JSON.stringify({ name, leader_id }),
+    }),
 };
 
 export const authApi = {
