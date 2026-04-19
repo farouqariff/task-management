@@ -6,8 +6,6 @@ from app.models.audit_log import AuditLog
 from app.models.user import User
 from app.models.project import Project
 from app.models.task import Task
-from app.models.role import Role
-from app.models.permission import Permission
 from app.schemas.audit_log_schema import AuditLogSchema
 from app.utils.auth import admin_required
 
@@ -19,8 +17,6 @@ _RESOURCE_MODEL_FIELD = {
     "user": (User, "email"),
     "project": (Project, "name"),
     "task": (Task, "name"),
-    "role": (Role, "name"),
-    "permission": (Permission, "name"),
 }
 
 

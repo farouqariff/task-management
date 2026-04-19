@@ -4,8 +4,6 @@ from sqlalchemy.exc import IntegrityError
 
 from app import db
 from app.models.user import User
-from app.models.role import Role
-from app.models.user_role import UserRole
 from app.schemas.user_schema import UserRegisterSchema, UserLoginSchema
 from app.utils.auth import write_audit
 
@@ -30,10 +28,6 @@ def register():
     try:
         db.session.add(user)
         db.session.flush()
-
-        default_role = Role.query.filter_by(name="user").first()
-        if default_role:
-            db.session.add(UserRole(user_id=user.id, role_id=default_role.id))
 
         write_audit("create", "user", user.id, {"email": user.email}, actor_id=user.id)
         db.session.commit()

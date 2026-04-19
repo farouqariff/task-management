@@ -27,8 +27,6 @@ def create_app(config_class=Config):
     from app.routes.users import bp as users_bp
     from app.routes.projects import bp as projects_bp
     from app.routes.tasks import bp as tasks_bp
-    from app.routes.roles import bp as roles_bp
-    from app.routes.permissions import bp as permissions_bp
     from app.routes.notifications import bp as notifications_bp
     from app.routes.audit import bp as audit_bp
 
@@ -36,8 +34,6 @@ def create_app(config_class=Config):
     app.register_blueprint(users_bp)
     app.register_blueprint(projects_bp)
     app.register_blueprint(tasks_bp)
-    app.register_blueprint(roles_bp)
-    app.register_blueprint(permissions_bp)
     app.register_blueprint(notifications_bp)
     app.register_blueprint(audit_bp)
 

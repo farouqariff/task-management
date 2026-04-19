@@ -50,18 +50,6 @@ class User(db.Model):
         cascade="all, delete-orphan",
         lazy=True,
     )
-    user_roles = db.relationship(
-        "UserRole",
-        back_populates="user",
-        cascade="all, delete-orphan",
-        lazy=True,
-    )
-    user_permissions = db.relationship(
-        "UserPermission",
-        back_populates="user",
-        cascade="all, delete-orphan",
-        lazy=True,
-    )
     notifications = db.relationship(
         "Notification",
         back_populates="user",
@@ -83,20 +71,6 @@ class User(db.Model):
 
     def check_password(self, password: str) -> bool:
         return bcrypt.checkpw(password.encode(), self.password_hash.encode())
-
-    def has_permission(self, permission_name: str) -> bool:
-        if self.is_admin:
-            return True
-        for up in self.user_permissions:
-            if up.permission and up.permission.name == permission_name:
-                return True
-        for ur in self.user_roles:
-            if not ur.role:
-                continue
-            for rp in ur.role.role_permissions:
-                if rp.permission and rp.permission.name == permission_name:
-                    return True
-        return False
 
     def to_dict(self) -> dict:
         return {

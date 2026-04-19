@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Link, useLocation } from "react-router";
 
 // Assume these icons are imported from an icon library
@@ -11,12 +12,18 @@ import {
   ListIcon,
   PageIcon,
   PieChartIcon,
+  ProjectIcon,
   TableIcon,
   TaskIcon,
   UserCircleIcon,
   LogIcon,
   UsersIcon,
 } from "../icons";
+import { Modal } from "../components/ui/modal";
+import { useModal } from "../hooks/useModal";
+import Button from "../components/ui/button/Button";
+import Input from "../components/form/input/InputField";
+import Label from "../components/form/Label";
 import { useSidebar } from "../context/SidebarContext";
 import { useAuth } from "../context/AuthContext";
 
@@ -104,6 +111,7 @@ const othersItems: NavItem[] = [
 const AppSidebar: React.FC = () => {
   const { isExpanded, isMobileOpen, isHovered, setIsHovered } = useSidebar();
   const { user } = useAuth();
+  const { isOpen, openModal, closeModal } = useModal();
   const filteredNavItems = navItems.filter(
     (item) =>
       (item.path !== "/users" && item.path !== "/log") || user?.is_admin,
@@ -298,6 +306,7 @@ const AppSidebar: React.FC = () => {
   );
 
   return (
+    <>
     <aside
       className={`fixed mt-16 flex flex-col lg:mt-0 top-0 px-5 left-0 bg-white dark:bg-gray-900 dark:border-gray-800 text-gray-900 h-screen transition-all duration-300 ease-in-out z-50 border-r border-gray-200 
         ${
@@ -364,6 +373,40 @@ const AppSidebar: React.FC = () => {
               </h2>
               {renderMenuItems(filteredNavItems, "main")}
             </div>
+            <div>
+              <h2
+                className={`mb-4 text-xs uppercase flex leading-[20px] text-gray-400 ${
+                  !isExpanded && !isHovered
+                    ? "lg:justify-center"
+                    : "justify-start"
+                }`}
+              >
+                {isExpanded || isHovered || isMobileOpen ? (
+                  "Projects"
+                ) : (
+                  <HorizontaLDots className="size-6" />
+                )}
+              </h2>
+              <ul className="flex flex-col gap-4">
+                <li>
+                  <button
+                    onClick={openModal}
+                    className={`menu-item group menu-item-inactive cursor-pointer ${
+                      !isExpanded && !isHovered
+                        ? "lg:justify-center"
+                        : "lg:justify-start"
+                    }`}
+                  >
+                    <span className="menu-item-icon-size menu-item-icon-inactive">
+                      <ProjectIcon />
+                    </span>
+                    {(isExpanded || isHovered || isMobileOpen) && (
+                      <span className="menu-item-text">New Project</span>
+                    )}
+                  </button>
+                </li>
+              </ul>
+            </div>
             <div className="">
               <h2
                 className={`mb-4 text-xs uppercase flex leading-[20px] text-gray-400 ${
@@ -384,6 +427,50 @@ const AppSidebar: React.FC = () => {
         </nav>
       </div>
     </aside>
+
+      {createPortal(
+      <Modal isOpen={isOpen} onClose={closeModal} className="max-w-[584px] m-4">
+        <div className="relative w-full rounded-3xl bg-white p-6 dark:bg-gray-900">
+          <h4 className="mb-6 text-lg font-semibold text-gray-800 dark:text-white/90">
+            Personal Information
+          </h4>
+          <form className="flex flex-col">
+            <div className="grid grid-cols-1 gap-x-5 gap-y-5 sm:grid-cols-2">
+              <div>
+                <Label>First Name</Label>
+                <Input type="text" placeholder="Musharof" />
+              </div>
+              <div>
+                <Label>Last Name</Label>
+                <Input type="text" placeholder="Chowdhury" />
+              </div>
+              <div>
+                <Label>Email Address</Label>
+                <Input type="text" placeholder="randomuser@pimjo.com" />
+              </div>
+              <div>
+                <Label>Phone</Label>
+                <Input type="text" placeholder="+09 363 398 46" />
+              </div>
+              <div className="sm:col-span-2">
+                <Label>Bio</Label>
+                <Input type="text" placeholder="Team Manager" />
+              </div>
+            </div>
+            <div className="mt-6 flex items-center justify-end gap-3">
+              <Button size="sm" variant="outline" onClick={closeModal}>
+                Close
+              </Button>
+              <Button size="sm" onClick={closeModal}>
+                Save Changes
+              </Button>
+            </div>
+          </form>
+        </div>
+      </Modal>,
+      document.body,
+    )}
+    </>
   );
 };
 
