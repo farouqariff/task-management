@@ -322,7 +322,7 @@ const AppSidebar: React.FC = () => {
               </h2>
               {renderMenuItems(filteredNavItems, "main")}
             </div>
-            {projects.filter((p) => !p.is_completed).length > 0 && (
+            {!user?.is_admin && projects.filter((p) => !p.is_completed).length > 0 && (
               <div>
                 <h2
                   className={`mb-4 text-xs uppercase flex leading-[20px] text-gray-400 ${

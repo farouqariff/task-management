@@ -27,6 +27,22 @@ const columns: Column<ProjectItem>[] = [
       </span>
     ),
   },
+  {
+    key: "is_completed",
+    header: "Completed",
+    sortable: true,
+    accessor: (row) => (row.is_completed ? "Yes" : "No"),
+    render: (row) =>
+      row.is_completed ? (
+        <span className="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-700 dark:bg-green-900/30 dark:text-green-400">
+          Yes
+        </span>
+      ) : (
+        <span className="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-600 dark:bg-gray-800 dark:text-gray-400">
+          No
+        </span>
+      ),
+  },
 ];
 
 const searchProject = (row: ProjectItem) => row.name;
