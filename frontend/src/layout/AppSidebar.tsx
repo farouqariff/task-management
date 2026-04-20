@@ -5,7 +5,6 @@ import { Link, useLocation } from "react-router";
 import {
   BoxCubeIcon,
   ChevronDownIcon,
-  GridIcon,
   HorizontaLDots,
   ListIcon,
   PageIcon,
@@ -29,11 +28,6 @@ type NavItem = {
 };
 
 const navItems: NavItem[] = [
-  {
-    icon: <GridIcon />,
-    name: "Dashboard",
-    path: "/",
-  },
   {
     icon: <UsersIcon />,
     name: "Users",
@@ -332,7 +326,7 @@ const AppSidebar: React.FC = () => {
           !isExpanded && !isHovered ? "lg:justify-center" : "justify-start"
         }`}
       >
-        <Link to="/">
+        <Link to="/tasks">
           {isExpanded || isHovered || isMobileOpen ? (
             <>
               <img

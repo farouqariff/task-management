@@ -17,7 +17,6 @@ import FormElements from "./pages/Forms/FormElements";
 import Blank from "./pages/Blank";
 import AppLayout from "./layout/AppLayout";
 import { ScrollToTop } from "./components/common/ScrollToTop";
-import Home from "./pages/Dashboard/Home";
 import ResetPassword from "./pages/AuthPages/ResetPassword";
 import NewPassword from "./pages/AuthPages/NewPassword";
 import Log from "./pages/Log";
@@ -34,7 +33,7 @@ function PrivateRoute({ children }: { children: ReactNode }) {
 
 function PublicRoute({ children }: { children: ReactNode }) {
   const { isAuthenticated } = useAuth();
-  return isAuthenticated ? <Navigate to="/" replace /> : <>{children}</>;
+  return isAuthenticated ? <Navigate to="/tasks" replace /> : <>{children}</>;
 }
 
 function AdminRoute({ children }: { children: ReactNode }) {
@@ -60,7 +59,7 @@ export default function App() {
               </PrivateRoute>
             }
           >
-            <Route index path="/" element={<Home />} />
+            <Route index path="/" element={<Navigate to="/tasks" replace />} />
 
             {/* Admin Pages */}
             <Route
