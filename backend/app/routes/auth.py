@@ -4,6 +4,8 @@ from sqlalchemy.exc import IntegrityError
 
 from app import db
 from app.models.user import User
+from app.models.project import Project
+from app.models.project_member import ProjectMember
 from app.schemas.user_schema import UserRegisterSchema, UserLoginSchema
 from app.utils.auth import write_audit
 
@@ -28,6 +30,11 @@ def register():
     try:
         db.session.add(user)
         db.session.flush()
+
+        personal = Project(name="Personal", created_by=user.id, is_personal=True)
+        db.session.add(personal)
+        db.session.flush()
+        db.session.add(ProjectMember(project_id=personal.id, user_id=user.id, role="leader"))
 
         write_audit("create", "user", user.id, {"email": user.email}, actor_id=user.id, resource_label=user.email)
         db.session.commit()

@@ -83,6 +83,9 @@ def create_task():
     db.session.add(task)
     db.session.flush()
 
+    if project.is_personal:
+        db.session.add(TaskAssignee(task_id=task.id, user_id=me_.id))
+
     write_audit("create", "task", task.id, {"name": task.name, "project_id": task.project_id}, resource_label=task.name)
     db.session.commit()
     return jsonify(task_schema.dump(task)), 201

@@ -24,7 +24,7 @@ class ProjectSchema(ma.SQLAlchemyAutoSchema):
         load_instance = True
         include_fk = True
         sqla_session = db.session
-        dump_only = ("id", "created_by", "created_at", "updated_at")
+        dump_only = ("id", "created_by", "created_at", "updated_at", "is_personal")
 
     name = ma.auto_field(required=True, validate=validate.Length(min=1, max=200))
 

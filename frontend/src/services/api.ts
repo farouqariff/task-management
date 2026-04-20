@@ -53,6 +53,7 @@ export interface UserItem {
 export const usersApi = {
   list: () => request<UserItem[]>("/users"),
   search: (query: string) => request<UserItem[]>(`/users?search=${encodeURIComponent(query)}`),
+  getPersonalProject: () => request<{ id: number; name: string }>("/users/me/personal-project"),
   adminCreate: (first_name: string, last_name: string, email: string, password: string) =>
     request<UserItem>("/users", {
       method: "POST",
@@ -161,8 +162,8 @@ export interface TaskItem {
 }
 
 export const tasksApi = {
-  list: (project_id: number) =>
-    request<TaskItem[]>(`/tasks?project_id=${project_id}`),
+  list: (project_id?: number) =>
+    request<TaskItem[]>(project_id !== undefined ? `/tasks?project_id=${project_id}` : "/tasks"),
   create: (data: {
     name: string;
     priority: string;

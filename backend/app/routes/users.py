@@ -34,6 +34,12 @@ def create_user():
     try:
         db.session.add(user)
         db.session.flush()
+
+        personal = Project(name="Personal", created_by=user.id, is_personal=True)
+        db.session.add(personal)
+        db.session.flush()
+        db.session.add(ProjectMember(project_id=personal.id, user_id=user.id, role="leader"))
+
         write_audit("create", "user", user.id, {"email": user.email}, resource_label=user.email)
         db.session.commit()
     except IntegrityError:
@@ -64,6 +70,18 @@ def me():
     if not user:
         return jsonify({"error": "user not found"}), 404
     return jsonify(user_schema.dump(user)), 200
+
+
+@bp.get("/me/personal-project")
+@jwt_required()
+def get_personal_project():
+    me_ = current_user()
+    if not me_:
+        return jsonify({"error": "user not found"}), 404
+    project = Project.query.filter_by(created_by=me_.id, is_personal=True).first()
+    if not project:
+        return jsonify({"error": "personal project not found"}), 404
+    return jsonify({"id": project.id, "name": project.name}), 200
 
 
 @bp.get("/<int:user_id>")

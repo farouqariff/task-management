@@ -34,11 +34,12 @@ def list_projects():
         return jsonify({"error": "user not found"}), 404
 
     if me_.is_admin:
-        projects = Project.query.order_by(Project.id.desc()).all()
+        projects = Project.query.filter_by(is_personal=False).order_by(Project.id.desc()).all()
     else:
         projects = (
             Project.query
             .outerjoin(ProjectMember, ProjectMember.project_id == Project.id)
+            .filter(Project.is_personal == False)
             .filter((Project.created_by == me_.id) | (ProjectMember.user_id == me_.id))
             .distinct()
             .order_by(Project.id.desc())
