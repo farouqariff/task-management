@@ -8,7 +8,8 @@ class Project(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(200), nullable=False)
-    created_by = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
+    created_by = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
+    is_completed = db.Column(db.Boolean, nullable=False, default=False)
     created_at = db.Column(
         db.DateTime(timezone=True),
         default=lambda: datetime.now(timezone.utc),

@@ -76,12 +76,14 @@ def create_task():
         return jsonify({"error": "project not found"}), 404
     if not can_view_project(me_, project):
         return jsonify({"error": "forbidden"}), 403
+    if project.is_completed:
+        return jsonify({"error": "project is completed — no new tasks allowed"}), 400
 
     task.created_by = me_.id
     db.session.add(task)
     db.session.flush()
 
-    write_audit("create", "task", task.id, {"name": task.name, "project_id": task.project_id})
+    write_audit("create", "task", task.id, {"name": task.name, "project_id": task.project_id}, resource_label=task.name)
     db.session.commit()
     return jsonify(task_schema.dump(task)), 201
 
@@ -110,7 +112,7 @@ def update_task(task_id):
 
     if can_manage_task(me_, task):
         task_schema.load(payload, instance=task, partial=True)
-        write_audit("update", "task", task.id, payload)
+        write_audit("update", "task", task.id, payload, resource_label=task.name)
         db.session.commit()
         return jsonify(task_schema.dump(task)), 200
 
@@ -123,7 +125,7 @@ def update_task(task_id):
     for key, value in data.items():
         setattr(task, key, value)
 
-    write_audit("update", "task", task.id, data)
+    write_audit("update", "task", task.id, data, resource_label=task.name)
     db.session.commit()
     return jsonify(task_schema.dump(task)), 200
 
@@ -138,8 +140,9 @@ def delete_task(task_id):
     if not can_manage_task(me_, task):
         return jsonify({"error": "forbidden"}), 403
 
+    deleted_name = task.name
     db.session.delete(task)
-    write_audit("delete", "task", task_id, None)
+    write_audit("delete", "task", task_id, None, resource_label=deleted_name)
     db.session.commit()
     return jsonify({"msg": "task deleted", "id": task_id}), 200
 
@@ -180,7 +183,7 @@ def add_assignee(task_id):
 
     assignee = TaskAssignee(task_id=task_id, user_id=user_id)
     db.session.add(assignee)
-    write_audit("add_assignee", "task", task_id, {"user_id": user_id})
+    write_audit("add_assignee", "task", task_id, {"user_id": user_id}, resource_label=task.name)
     db.session.commit()
     return jsonify(assignee_schema.dump(assignee)), 201
 
@@ -200,6 +203,6 @@ def remove_assignee(task_id, user_id):
         return jsonify({"error": "assignee not found"}), 404
 
     db.session.delete(assignee)
-    write_audit("remove_assignee", "task", task_id, {"user_id": user_id})
+    write_audit("remove_assignee", "task", task_id, {"user_id": user_id}, resource_label=task.name)
     db.session.commit()
     return jsonify({"msg": "assignee removed"}), 200

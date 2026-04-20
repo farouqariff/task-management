@@ -49,17 +49,23 @@ def can_manage_task(user: User, task: Task) -> bool:
     return task.project is not None and user.id in task.project.leader_ids()
 
 
-def write_audit(action: str, resource_type: str, resource_id: int | None, changes: dict | None = None, actor_id: int | None = None) -> None:
+def write_audit(action: str, resource_type: str, resource_id: int | None, changes: dict | None = None, actor_id: int | None = None, resource_label: str | None = None) -> None:
     try:
         uid = get_jwt_identity()
     except RuntimeError:
         uid = None
     resolved_id = actor_id if actor_id is not None else (int(uid) if uid is not None else None)
+    actor_email = None
+    if resolved_id:
+        actor = User.query.get(resolved_id)
+        actor_email = actor.email if actor else None
     log = AuditLog(
         user_id=resolved_id,
+        user_email=actor_email,
         action=action,
         resource_type=resource_type,
         resource_id=resource_id,
+        resource_label=resource_label,
         changes=changes,
         ip_address=request.remote_addr,
     )

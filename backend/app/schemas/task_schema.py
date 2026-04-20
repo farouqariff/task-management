@@ -31,7 +31,7 @@ class TaskSchema(ma.SQLAlchemyAutoSchema):
     priority = ma.auto_field(validate=validate.OneOf(ALLOWED_PRIORITIES))
     due_date = fields.Date(allow_none=True, format="iso")
 
-    creator_email = fields.String(attribute="creator.email", dump_only=True)
+    creator_email = fields.Function(lambda obj: obj.creator.email if obj.creator else None, dump_only=True)
     project_name = fields.String(attribute="project.name", dump_only=True)
     assignees = fields.Nested(TaskAssigneeSchema, many=True, dump_only=True)
 

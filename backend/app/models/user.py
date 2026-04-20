@@ -28,7 +28,7 @@ class User(db.Model):
         "Task",
         back_populates="creator",
         foreign_keys="Task.created_by",
-        cascade="all, delete-orphan",
+        passive_deletes=True,
         lazy=True,
     )
     task_assignments = db.relationship(
@@ -41,7 +41,7 @@ class User(db.Model):
         "Project",
         back_populates="creator",
         foreign_keys="Project.created_by",
-        cascade="all, delete-orphan",
+        passive_deletes=True,
         lazy=True,
     )
     project_memberships = db.relationship(
@@ -54,11 +54,6 @@ class User(db.Model):
         "Notification",
         back_populates="user",
         cascade="all, delete-orphan",
-        lazy=True,
-    )
-    audit_logs = db.relationship(
-        "AuditLog",
-        back_populates="user",
         lazy=True,
     )
 

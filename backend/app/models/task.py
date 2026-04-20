@@ -11,7 +11,7 @@ class Task(db.Model):
     status = db.Column(db.String(20), nullable=False, default="todo")
     priority = db.Column(db.String(20), nullable=False, default="low")
     project_id = db.Column(db.Integer, db.ForeignKey("projects.id"), nullable=False, index=True)
-    created_by = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
+    created_by = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
     created_at = db.Column(
         db.DateTime(timezone=True),
         default=lambda: datetime.now(timezone.utc),

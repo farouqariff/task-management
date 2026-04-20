@@ -55,3 +55,14 @@ class UserUpdateSchema(ma.Schema):
     @pre_load
     def normalize(self, data, **kwargs):
         return _normalize(data)
+
+
+class UserAdminUpdateSchema(ma.Schema):
+    """Used when admin edits another user — password change not allowed."""
+    first_name = fields.String(validate=validate.Length(min=1, max=80))
+    last_name = fields.String(validate=validate.Length(min=1, max=80))
+    email = fields.Email()
+
+    @pre_load
+    def normalize(self, data, **kwargs):
+        return _normalize(data)

@@ -29,7 +29,7 @@ def register():
         db.session.add(user)
         db.session.flush()
 
-        write_audit("create", "user", user.id, {"email": user.email}, actor_id=user.id)
+        write_audit("create", "user", user.id, {"email": user.email}, actor_id=user.id, resource_label=user.email)
         db.session.commit()
     except IntegrityError:
         db.session.rollback()

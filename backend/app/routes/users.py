@@ -4,14 +4,43 @@ from sqlalchemy.exc import IntegrityError
 
 from app import db
 from app.models.user import User
-from app.schemas.user_schema import UserSchema, UserUpdateSchema
+from app.models.project import Project
+from app.models.project_member import ProjectMember
+from app.schemas.user_schema import UserSchema, UserRegisterSchema, UserUpdateSchema, UserAdminUpdateSchema
 from app.utils.auth import current_user, admin_required, write_audit
 
 bp = Blueprint("users", __name__, url_prefix="/users")
 
 user_schema = UserSchema()
 users_schema = UserSchema(many=True)
+register_schema = UserRegisterSchema()
 update_schema = UserUpdateSchema()
+admin_update_schema = UserAdminUpdateSchema()
+
+
+@bp.post("")
+@admin_required
+def create_user():
+    data = register_schema.load(request.get_json(silent=True) or {})
+
+    user = User(
+        first_name=data["first_name"],
+        last_name=data["last_name"],
+        email=data["email"],
+        is_admin=False,
+    )
+    user.set_password(data["password"])
+
+    try:
+        db.session.add(user)
+        db.session.flush()
+        write_audit("create", "user", user.id, {"email": user.email}, resource_label=user.email)
+        db.session.commit()
+    except IntegrityError:
+        db.session.rollback()
+        return jsonify({"error": "email already registered"}), 409
+
+    return jsonify(user_schema.dump(user)), 201
 
 
 @bp.get("")
@@ -65,7 +94,11 @@ def update_user(user_id):
     if not user:
         return jsonify({"error": "user not found"}), 404
 
-    data = update_schema.load(request.get_json(silent=True) or {})
+    # Admin editing someone else: no password change allowed
+    if me_.is_admin and me_.id != user_id:
+        data = admin_update_schema.load(request.get_json(silent=True) or {})
+    else:
+        data = update_schema.load(request.get_json(silent=True) or {})
 
     if "password" in data:
         user.set_password(data.pop("password"))
@@ -73,7 +106,7 @@ def update_user(user_id):
         setattr(user, key, value)
 
     try:
-        write_audit("update", "user", user.id, {k: v for k, v in data.items() if k != "password"})
+        write_audit("update", "user", user.id, {k: v for k, v in data.items() if k != "password"}, resource_label=user.email)
         db.session.commit()
     except IntegrityError:
         db.session.rollback()
@@ -85,10 +118,34 @@ def update_user(user_id):
 @bp.delete("/<int:user_id>")
 @admin_required
 def delete_user(user_id):
+    me_ = current_user()
+    if me_ and me_.id == user_id:
+        return jsonify({"error": "You cannot delete your own account."}), 403
+
     user = User.query.get(user_id)
     if not user:
         return jsonify({"error": "user not found"}), 404
+
+    # Block deletion if user is the sole leader of any project
+    leader_memberships = ProjectMember.query.filter_by(user_id=user_id, role="leader").all()
+    sole_leader_of = []
+    for membership in leader_memberships:
+        other_leaders = ProjectMember.query.filter(
+            ProjectMember.project_id == membership.project_id,
+            ProjectMember.role == "leader",
+            ProjectMember.user_id != user_id,
+        ).count()
+        if other_leaders == 0:
+            project = Project.query.get(membership.project_id)
+            sole_leader_of.append(project.name if project else f"project #{membership.project_id}")
+
+    if sole_leader_of:
+        return jsonify({
+            "error": f"User is the sole leader of: {', '.join(sole_leader_of)}. Reassign the leader before deleting."
+        }), 409
+
+    deleted_email = user.email
     db.session.delete(user)
-    write_audit("delete", "user", user_id, None)
+    write_audit("delete", "user", user_id, None, resource_label=deleted_email)
     db.session.commit()
     return jsonify({"msg": "user deleted", "id": user_id}), 200

@@ -28,7 +28,7 @@ class ProjectSchema(ma.SQLAlchemyAutoSchema):
 
     name = ma.auto_field(required=True, validate=validate.Length(min=1, max=200))
 
-    creator_email = fields.String(attribute="creator.email", dump_only=True)
+    creator_email = fields.Function(lambda obj: obj.creator.email if obj.creator else None, dump_only=True)
     members = fields.Nested(ProjectMemberSchema, many=True, dump_only=True)
 
 
