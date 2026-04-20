@@ -3,7 +3,15 @@ import { useParams } from "react-router";
 import PageBreadcrumb from "../../components/common/PageBreadCrumb";
 import PageMeta from "../../components/common/PageMeta";
 import Badge from "../../components/ui/badge/Badge";
-import { AddIcon, CalenderIcon, LoadingIcon } from "../../icons";
+import {
+  AddIcon,
+  CalenderIcon,
+  LoadingIcon,
+  PencilIcon,
+  TrashBinIcon,
+  TaskToDoIcon,
+  TaskCompletedIcon,
+} from "../../icons";
 import Button from "../../components/ui/button/Button";
 import { Modal } from "../../components/ui/modal";
 import { useModal } from "../../hooks/useModal";
@@ -38,20 +46,23 @@ function formatDate(dateStr: string): string {
 
 interface TaskRowProps {
   task: TaskItem;
+  canEdit: boolean;
+  onEdit: (task: TaskItem) => void;
   onToggle: (task: TaskItem) => void;
   onDelete: (task: TaskItem) => void;
 }
 
-const TaskRow: React.FC<TaskRowProps> = ({ task, onToggle, onDelete }) => {
+const TaskRow: React.FC<TaskRowProps> = ({ task, canEdit, onEdit, onToggle, onDelete }) => {
   const completed = task.status === "completed";
   return (
     <div className="flex flex-wrap items-center gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3 transition hover:border-gray-300 dark:border-gray-800 dark:bg-white/[0.03] dark:hover:border-gray-700">
-      <label className="flex cursor-pointer items-center">
+      <label className={`flex items-center ${canEdit ? "cursor-pointer" : "cursor-default"}`}>
         <input
           type="checkbox"
           checked={completed}
-          onChange={() => onToggle(task)}
+          onChange={() => { if (canEdit) onToggle(task); }}
           className="peer sr-only"
+          disabled={!canEdit}
         />
         <span
           className={`flex h-5 w-5 items-center justify-center rounded-md border transition ${
@@ -123,27 +134,24 @@ const TaskRow: React.FC<TaskRowProps> = ({ task, onToggle, onDelete }) => {
           ))}
         </div>
 
+        {canEdit && (
+          <button
+            type="button"
+            onClick={() => onEdit(task)}
+            className="text-gray-400 transition-colors hover:text-brand-500"
+            title="Edit task"
+          >
+            <PencilIcon className="size-5" />
+          </button>
+        )}
+
         <button
           type="button"
           onClick={() => onDelete(task)}
-          className="flex h-7 w-7 items-center justify-center rounded-md text-gray-400 transition hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-500/10 dark:hover:text-red-400"
+          className="text-gray-400 transition-colors hover:text-error-500"
           title="Delete task"
         >
-          <svg
-            width="15"
-            height="15"
-            viewBox="0 0 15 15"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              d="M5.5 1.5H9.5M1.5 3.5H13.5M12.5 3.5L11.688 12.618C11.619 13.393 10.972 14 10.194 14H4.806C4.028 14 3.381 13.393 3.312 12.618L2.5 3.5"
-              stroke="currentColor"
-              strokeWidth="1.3"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
+          <TrashBinIcon className="size-5" />
         </button>
       </div>
     </div>
@@ -155,6 +163,8 @@ interface TaskSectionProps {
   count: number;
   countColor: "warning" | "info" | "success" | "light";
   tasks: TaskItem[];
+  canEdit: (task: TaskItem) => boolean;
+  onEdit: (task: TaskItem) => void;
   onToggle: (task: TaskItem) => void;
   onDelete: (task: TaskItem) => void;
 }
@@ -164,6 +174,8 @@ const TaskSection: React.FC<TaskSectionProps> = ({
   count,
   countColor,
   tasks,
+  canEdit,
+  onEdit,
   onToggle,
   onDelete,
 }) => {
@@ -186,6 +198,8 @@ const TaskSection: React.FC<TaskSectionProps> = ({
           <TaskRow
             key={task.id}
             task={task}
+            canEdit={canEdit(task)}
+            onEdit={onEdit}
             onToggle={onToggle}
             onDelete={onDelete}
           />
@@ -218,25 +232,45 @@ export default function ProjectDetail() {
   const [showNewMemberDropdown, setShowNewMemberDropdown] = useState(false);
   const [newMemberError, setNewMemberError] = useState<string | null>(null);
   const [newMemberSaving, setNewMemberSaving] = useState(false);
-  const newMemberDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(
-    null,
-  );
+  const newMemberDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Project-level manage permission (admin or project leader)
   const canManage =
     currentUser?.is_admin ||
     members.some((m) => m.user_id === currentUser?.id && m.role === "leader");
 
+  // Task-level manage permission: admin, project leader, or task creator
+  const canManageTask = (task: TaskItem) =>
+    canManage || task.created_by === currentUser?.id;
+
+  // Show edit button: managers can edit any task; members can only edit tasks they're assigned to
+  const canEditTask = (task: TaskItem) =>
+    canManageTask(task) ||
+    task.assignees.some((a) => a.user_id === currentUser?.id);
+
+  // Add task state
   const [taskName, setTaskName] = useState("");
-  const [taskPriority, setTaskPriority] = useState<"low" | "medium" | "high">(
-    "low",
-  );
+  const [taskPriority, setTaskPriority] = useState<"low" | "medium" | "high">("low");
   const [taskDueDate, setTaskDueDate] = useState("");
   const [memberSearch, setMemberSearch] = useState("");
-  const [selectedAssignees, setSelectedAssignees] = useState<
-    ProjectMemberItem[]
-  >([]);
+  const [selectedAssignees, setSelectedAssignees] = useState<ProjectMemberItem[]>([]);
   const [taskError, setTaskError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+
+  // Edit task state
+  const [editingTask, setEditingTask] = useState<TaskItem | null>(null);
+  const [editTaskName, setEditTaskName] = useState("");
+  const [editTaskPriority, setEditTaskPriority] = useState<"low" | "medium" | "high">("low");
+  const [editTaskDueDate, setEditTaskDueDate] = useState("");
+  const [editTaskAssignees, setEditTaskAssignees] = useState<{ user_id: number; user_email: string }[]>([]);
+  const [editTaskMemberSearch, setEditTaskMemberSearch] = useState("");
+  const [editTaskError, setEditTaskError] = useState<string | null>(null);
+  const [editTaskSaving, setEditTaskSaving] = useState(false);
+
+  // Delete member state
+  const [deletingMember, setDeletingMember] = useState<ProjectMemberItem | null>(null);
+  const [deleteMemberError, setDeleteMemberError] = useState("");
+  const [deleteMemberLoading, setDeleteMemberLoading] = useState(false);
 
   const fetchTasks = async () => {
     const result = await tasksApi.list(projectId);
@@ -254,6 +288,7 @@ export default function ProjectDetail() {
     });
   }, [projectId]);
 
+  // Members filtered for "Add Task" assignee search
   const filteredMembers = useMemo(() => {
     if (!memberSearch.trim()) return [];
     return members.filter(
@@ -262,6 +297,32 @@ export default function ProjectDetail() {
         !selectedAssignees.some((s) => s.user_id === m.user_id),
     );
   }, [members, memberSearch, selectedAssignees]);
+
+  // Members filtered for "Edit Task" assignee search
+  const editFilteredMembers = useMemo(() => {
+    if (!editTaskMemberSearch.trim()) return [];
+    return members.filter(
+      (m) =>
+        m.user_email.toLowerCase().includes(editTaskMemberSearch.toLowerCase()) &&
+        !editTaskAssignees.some((a) => a.user_id === m.user_id),
+    );
+  }, [members, editTaskMemberSearch, editTaskAssignees]);
+
+  const memberTaskCounts = useMemo(() => {
+    const counts: Record<number, { todo: number; completed: number }> = {};
+    for (const m of members) {
+      counts[m.user_id] = { todo: 0, completed: 0 };
+    }
+    for (const task of tasks) {
+      for (const assignee of task.assignees) {
+        if (counts[assignee.user_id]) {
+          if (task.status === "todo") counts[assignee.user_id].todo++;
+          else if (task.status === "completed") counts[assignee.user_id].completed++;
+        }
+      }
+    }
+    return counts;
+  }, [tasks, members]);
 
   const handleSelectMember = (member: ProjectMemberItem) => {
     setSelectedAssignees((prev) => [...prev, member]);
@@ -275,8 +336,7 @@ export default function ProjectDetail() {
   const handleNewMemberSearch = (value: string) => {
     setNewMemberSearch(value);
     setNewMemberId(null);
-    if (newMemberDebounceRef.current)
-      clearTimeout(newMemberDebounceRef.current);
+    if (newMemberDebounceRef.current) clearTimeout(newMemberDebounceRef.current);
     if (!value.trim()) {
       setNewMemberResults([]);
       setShowNewMemberDropdown(false);
@@ -308,11 +368,7 @@ export default function ProjectDetail() {
       return;
     }
     setNewMemberSaving(true);
-    const result = await projectsApi.addMember(
-      projectId,
-      newMemberId,
-      "member",
-    );
+    const result = await projectsApi.addMember(projectId, newMemberId, "member");
     if (result.error) {
       setNewMemberError(result.error);
       setNewMemberSaving(false);
@@ -363,13 +419,90 @@ export default function ProjectDetail() {
       return;
     }
     await Promise.all(
-      selectedAssignees.map((a) =>
-        tasksApi.addAssignee(result.data!.id, a.user_id),
-      ),
+      selectedAssignees.map((a) => tasksApi.addAssignee(result.data!.id, a.user_id)),
     );
     setSaving(false);
     handleModalClose();
     fetchTasks();
+  };
+
+  const openEditTask = (task: TaskItem) => {
+    setEditingTask(task);
+    setEditTaskName(task.name);
+    setEditTaskPriority(task.priority);
+    setEditTaskDueDate(task.due_date ? task.due_date.split("T")[0] : "");
+    setEditTaskAssignees(task.assignees.map((a) => ({ user_id: a.user_id, user_email: a.user_email })));
+    setEditTaskMemberSearch("");
+    setEditTaskError(null);
+  };
+
+  const closeEditTask = () => {
+    setEditingTask(null);
+    setEditTaskAssignees([]);
+    setEditTaskMemberSearch("");
+    setEditTaskError(null);
+  };
+
+  const handleEditTaskSave = async () => {
+    if (!editingTask) return;
+    if (!editTaskName.trim()) {
+      setEditTaskError("Task name is required.");
+      return;
+    }
+    setEditTaskSaving(true);
+    setEditTaskError(null);
+
+    const isManager = canManageTask(editingTask);
+
+    const updatePayload = isManager
+      ? { name: editTaskName.trim(), priority: editTaskPriority, due_date: editTaskDueDate || null }
+      : { priority: editTaskPriority };
+
+    const result = await tasksApi.update(editingTask.id, updatePayload);
+    if (result.error) {
+      setEditTaskError(result.error);
+      setEditTaskSaving(false);
+      return;
+    }
+
+    if (isManager) {
+      const originalIds = new Set(editingTask.assignees.map((a) => a.user_id));
+      const newIds = new Set(editTaskAssignees.map((a) => a.user_id));
+      const toAdd = editTaskAssignees.filter((a) => !originalIds.has(a.user_id));
+      const toRemove = editingTask.assignees.filter((a) => !newIds.has(a.user_id));
+      await Promise.all([
+        ...toAdd.map((a) => tasksApi.addAssignee(editingTask.id, a.user_id)),
+        ...toRemove.map((a) => tasksApi.removeAssignee(editingTask.id, a.user_id)),
+      ]);
+    }
+
+    setEditTaskSaving(false);
+    closeEditTask();
+    fetchTasks();
+  };
+
+  const openDeleteMember = (m: ProjectMemberItem) => {
+    setDeletingMember(m);
+    setDeleteMemberError("");
+  };
+
+  const closeDeleteMember = () => {
+    setDeletingMember(null);
+    setDeleteMemberError("");
+  };
+
+  const handleDeleteMemberConfirm = async () => {
+    if (!deletingMember) return;
+    setDeleteMemberLoading(true);
+    setDeleteMemberError("");
+    const result = await projectsApi.removeMember(projectId, deletingMember.user_id);
+    setDeleteMemberLoading(false);
+    if (result.error) {
+      setDeleteMemberError(result.error);
+      return;
+    }
+    setMembers((prev) => prev.filter((m) => m.user_id !== deletingMember.user_id));
+    closeDeleteMember();
   };
 
   const toggleTask = async (task: TaskItem) => {
@@ -408,6 +541,9 @@ export default function ProjectDetail() {
         return PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority];
       });
   }, [tasks, activeTab]);
+
+  // Whether the task being edited allows full management (name, due_date, assignees)
+  const editingTaskIsManager = editingTask ? canManageTask(editingTask) : false;
 
   return (
     <>
@@ -486,30 +622,53 @@ export default function ProjectDetail() {
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    {members.map((m) => (
-                      <div
-                        key={m.user_id}
-                        className="flex items-center gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3 dark:border-gray-800 dark:bg-white/[0.03]"
-                      >
-                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-100 text-sm font-medium text-brand-700 dark:bg-brand-500/20 dark:text-brand-400">
-                          {m.user_email[0].toUpperCase()}
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium text-gray-800 dark:text-white/90">
-                            {m.user_full_name}
-                          </p>
-                          <p className="text-xs text-gray-500 dark:text-gray-400">
-                            {m.user_email}
-                          </p>
-                        </div>
-                        <Badge
-                          size="sm"
-                          color={m.role === "leader" ? "primary" : "light"}
+                    {members.map((m) => {
+                      const tc = memberTaskCounts[m.user_id] ?? { todo: 0, completed: 0 };
+                      return (
+                        <div
+                          key={m.user_id}
+                          className="flex items-center gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3 dark:border-gray-800 dark:bg-white/[0.03]"
                         >
-                          {m.role}
-                        </Badge>
-                      </div>
-                    ))}
+                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-100 text-sm font-medium text-brand-700 dark:bg-brand-500/20 dark:text-brand-400">
+                            {m.user_email[0].toUpperCase()}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-gray-800 dark:text-white/90">
+                              {m.user_full_name}
+                            </p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">
+                              {m.user_email}
+                            </p>
+                          </div>
+                          <Badge
+                            size="sm"
+                            color={m.role === "leader" ? "primary" : "light"}
+                          >
+                            {m.role}
+                          </Badge>
+                          <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400">
+                            <span className="flex items-center gap-1">
+                              <TaskToDoIcon className="size-5 text-warning-500" />
+                              {tc.todo}
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <TaskCompletedIcon className="size-5 text-success-500" />
+                              {tc.completed}
+                            </span>
+                          </div>
+                          {canManage && (
+                            <button
+                              type="button"
+                              onClick={() => openDeleteMember(m)}
+                              className="text-gray-400 transition-colors hover:text-error-500"
+                              title="Remove member"
+                            >
+                              <TrashBinIcon className="size-5" />
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </div>
@@ -520,6 +679,8 @@ export default function ProjectDetail() {
                   count={counts.todo}
                   countColor="light"
                   tasks={visibleTasks.filter((t) => t.status === "todo")}
+                  canEdit={canEditTask}
+                  onEdit={openEditTask}
                   onToggle={toggleTask}
                   onDelete={handleDeleteTask}
                 />
@@ -528,6 +689,8 @@ export default function ProjectDetail() {
                   count={counts.completed}
                   countColor="success"
                   tasks={visibleTasks.filter((t) => t.status === "completed")}
+                  canEdit={canEditTask}
+                  onEdit={openEditTask}
                   onToggle={toggleTask}
                   onDelete={handleDeleteTask}
                 />
@@ -542,6 +705,201 @@ export default function ProjectDetail() {
         </div>
       )}
 
+      {/* Edit Task Modal */}
+      <Modal
+        isOpen={editingTask !== null}
+        onClose={closeEditTask}
+        className="max-w-[584px] m-4"
+      >
+        <div className="relative w-full rounded-3xl bg-white p-6 dark:bg-gray-900">
+          <h4 className="mb-6 text-lg font-semibold text-gray-800 dark:text-white/90">
+            Edit Task
+          </h4>
+          <form className="flex flex-col" onSubmit={(e) => e.preventDefault()}>
+            <div className="grid grid-cols-1 gap-x-5 gap-y-5 sm:grid-cols-2">
+              {editingTaskIsManager && (
+                <div className="sm:col-span-2">
+                  <Label>Name</Label>
+                  <Input
+                    type="text"
+                    placeholder="Enter task name"
+                    value={editTaskName}
+                    onChange={(e) => setEditTaskName(e.target.value)}
+                  />
+                </div>
+              )}
+              <div>
+                <Label>Select Priority</Label>
+                <Select
+                  key={editingTask?.id}
+                  options={[
+                    { value: "low", label: "Low" },
+                    { value: "medium", label: "Medium" },
+                    { value: "high", label: "High" },
+                  ]}
+                  defaultValue={editTaskPriority}
+                  placeholder="Select an option"
+                  onChange={(value) =>
+                    setEditTaskPriority(value as "low" | "medium" | "high")
+                  }
+                  className="dark:bg-dark-900"
+                />
+              </div>
+              {editingTaskIsManager && (
+                <div>
+                  <DatePicker
+                    key={editingTask?.id}
+                    id="edit-date-picker"
+                    label="Due date"
+                    placeholder="Select a date"
+                    defaultDate={editTaskDueDate || undefined}
+                    onChange={(_dates, dateStr) => setEditTaskDueDate(dateStr)}
+                  />
+                </div>
+              )}
+              {editingTaskIsManager && (
+                <div className="sm:col-span-2 relative">
+                  <Label>Assign to</Label>
+                  {editTaskAssignees.length > 0 && (
+                    <div className="mb-2 flex flex-wrap gap-2">
+                      {editTaskAssignees.map((a) => (
+                        <span
+                          key={a.user_id}
+                          className="inline-flex items-center gap-1 rounded-full bg-brand-50 px-3 py-1 text-xs font-medium text-brand-700 dark:bg-brand-500/15 dark:text-brand-400"
+                        >
+                          {a.user_email}
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setEditTaskAssignees((prev) =>
+                                prev.filter((x) => x.user_id !== a.user_id),
+                              )
+                            }
+                            className="ml-1 leading-none text-brand-500 hover:text-brand-700"
+                          >
+                            ×
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  <Input
+                    type="text"
+                    placeholder="Search by email"
+                    value={editTaskMemberSearch}
+                    onChange={(e) => setEditTaskMemberSearch(e.target.value)}
+                  />
+                  {editTaskMemberSearch.trim() && editFilteredMembers.length > 0 && (
+                    <ul className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                      {editFilteredMembers.map((m) => (
+                        <li
+                          key={m.user_id}
+                          onClick={() => {
+                            setEditTaskAssignees((prev) => [
+                              ...prev,
+                              { user_id: m.user_id, user_email: m.user_email },
+                            ]);
+                            setEditTaskMemberSearch("");
+                          }}
+                          className="px-4 py-2 cursor-pointer text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+                        >
+                          {m.user_email}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  {editTaskMemberSearch.trim() && editFilteredMembers.length === 0 && (
+                    <div className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg px-4 py-2 text-sm text-gray-500 dark:text-gray-400">
+                      No members found.
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+            {editTaskError && (
+              <p className="mt-3 text-sm text-red-500">{editTaskError}</p>
+            )}
+            <div className="mt-6 flex items-center justify-end gap-3">
+              <Button size="sm" variant="outline" onClick={closeEditTask}>
+                Cancel
+              </Button>
+              <Button size="sm" onClick={handleEditTaskSave} disabled={editTaskSaving}>
+                {editTaskSaving ? "Saving..." : "Save Changes"}
+              </Button>
+            </div>
+          </form>
+        </div>
+      </Modal>
+
+      {/* Delete Member Modal */}
+      <Modal
+        isOpen={deletingMember !== null}
+        onClose={closeDeleteMember}
+        className="max-w-[507px] m-4"
+      >
+        <div className="relative w-full rounded-3xl bg-white p-6 text-center dark:bg-gray-900 sm:p-10">
+          <div className="mx-auto mb-7 flex h-24 w-24 items-center justify-center">
+            <svg
+              width="96"
+              height="96"
+              viewBox="0 0 96 96"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <g className="fill-error-50 dark:fill-error-500/15">
+                <circle cx="48" cy="24" r="20" />
+                <circle cx="48" cy="72" r="20" />
+                <circle cx="24" cy="48" r="20" />
+                <circle cx="72" cy="48" r="20" />
+                <circle cx="31" cy="31" r="20" />
+                <circle cx="65" cy="31" r="20" />
+                <circle cx="31" cy="65" r="20" />
+                <circle cx="65" cy="65" r="20" />
+              </g>
+              <path
+                d="M37 37L59 59M59 37L37 59"
+                className="stroke-error-500"
+                strokeWidth="4"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </div>
+          <h4 className="mb-3 text-title-sm font-semibold text-gray-800 dark:text-white/90">
+            Danger Alert!
+          </h4>
+          <p className="mx-auto mb-6 max-w-[380px] text-sm text-gray-500 dark:text-gray-400">
+            Are you sure you want to remove{" "}
+            <span className="font-medium text-gray-700 dark:text-gray-300">
+              {deletingMember?.user_full_name}
+            </span>{" "}
+            from this project? This action cannot be undone.
+          </p>
+          {deleteMemberError && (
+            <p className="mb-4 text-sm text-error-500">{deleteMemberError}</p>
+          )}
+          <div className="flex items-center justify-center gap-3">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={closeDeleteMember}
+              disabled={deleteMemberLoading}
+            >
+              Cancel
+            </Button>
+            <button
+              type="button"
+              onClick={handleDeleteMemberConfirm}
+              disabled={deleteMemberLoading}
+              className="inline-flex items-center justify-center gap-2 rounded-lg bg-error-500 px-4 py-3 text-sm font-medium text-white shadow-theme-xs transition hover:bg-error-600 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {deleteMemberLoading ? "Removing..." : "Remove"}
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Add Member Modal */}
       <Modal
         isOpen={isMemberOpen}
         onClose={handleMemberModalClose}
@@ -587,18 +945,10 @@ export default function ProjectDetail() {
               <p className="mt-3 text-sm text-red-500">{newMemberError}</p>
             )}
             <div className="mt-6 flex items-center justify-end gap-3">
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={handleMemberModalClose}
-              >
+              <Button size="sm" variant="outline" onClick={handleMemberModalClose}>
                 Cancel
               </Button>
-              <Button
-                size="sm"
-                onClick={handleAddMember}
-                disabled={newMemberSaving}
-              >
+              <Button size="sm" onClick={handleAddMember} disabled={newMemberSaving}>
                 {newMemberSaving ? "Adding..." : "Add"}
               </Button>
             </div>
@@ -606,6 +956,7 @@ export default function ProjectDetail() {
         </div>
       </Modal>
 
+      {/* Add Task Modal */}
       <Modal
         isOpen={isOpen}
         onClose={handleModalClose}

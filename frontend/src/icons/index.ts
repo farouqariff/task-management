@@ -60,6 +60,8 @@ import { ReactComponent as AddIcon } from "./add.svg?react";
 import { ReactComponent as LoadingIcon } from "./loading.svg?react";
 import { ReactComponent as ProjectIcon } from "./project.svg?react";
 import { ReactComponent as ViewIcon } from "./view.svg?react";
+import { ReactComponent as TaskToDoIcon } from "./task-todo.svg?react";
+import { ReactComponent as TaskCompletedIcon } from "./task-completed.svg?react";
 
 export {
   ErrorHexaIcon,
@@ -124,4 +126,6 @@ export {
   LoadingIcon,
   ProjectIcon,
   ViewIcon,
+  TaskToDoIcon,
+  TaskCompletedIcon,
 };

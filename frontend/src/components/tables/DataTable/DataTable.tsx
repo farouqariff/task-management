@@ -31,6 +31,7 @@ interface DataTableProps<T> {
   onView?: (row: T) => void;
   onEdit?: (row: T) => void;
   onDelete?: (row: T) => void;
+  canEdit?: (row: T) => boolean;
   canDelete?: (row: T) => boolean;
   pageSizeOptions?: number[];
   initialPageSize?: number;
@@ -46,6 +47,7 @@ export default function DataTable<T>({
   searchable,
   onView,
   onEdit,
+  canEdit,
   onDelete,
   canDelete,
   pageSizeOptions = [10, 25, 50, 100],
@@ -263,7 +265,7 @@ export default function DataTable<T>({
                             <ViewIcon className="size-5" />
                           </button>
                         )}
-                        {onEdit && (
+                        {onEdit && (!canEdit || canEdit(row)) && (
                           <button
                             type="button"
                             onClick={() => onEdit(row)}

@@ -98,6 +98,7 @@ export interface ProjectItem {
   created_by: number | null;
   is_completed: boolean;
   created_at: string;
+  members: ProjectMemberItem[];
 }
 
 export interface ProjectMemberItem {
@@ -172,7 +173,7 @@ export const tasksApi = {
       method: "POST",
       body: JSON.stringify(data),
     }),
-  update: (task_id: number, data: Partial<Pick<TaskItem, "status" | "priority">>) =>
+  update: (task_id: number, data: Partial<Pick<TaskItem, "status" | "priority" | "name" | "due_date">>) =>
     request<TaskItem>(`/tasks/${task_id}`, {
       method: "PUT",
       body: JSON.stringify(data),
@@ -184,6 +185,8 @@ export const tasksApi = {
       method: "POST",
       body: JSON.stringify({ user_id }),
     }),
+  removeAssignee: (task_id: number, user_id: number) =>
+    request(`/tasks/${task_id}/assignees/${user_id}`, { method: "DELETE" }),
 };
 
 export const authApi = {
