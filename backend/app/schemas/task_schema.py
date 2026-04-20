@@ -4,7 +4,7 @@ from app import ma, db
 from app.models.task import Task
 from app.models.task_assignee import TaskAssignee
 
-ALLOWED_STATUSES = ("pending", "in_progress", "completed")
+ALLOWED_STATUSES = ("todo", "completed")
 ALLOWED_PRIORITIES = ("low", "medium", "high")
 
 
@@ -29,7 +29,7 @@ class TaskSchema(ma.SQLAlchemyAutoSchema):
 
     status = ma.auto_field(validate=validate.OneOf(ALLOWED_STATUSES))
     priority = ma.auto_field(validate=validate.OneOf(ALLOWED_PRIORITIES))
-    due_date = fields.DateTime(allow_none=True, format="iso")
+    due_date = fields.Date(allow_none=True, format="iso")
 
     creator_email = fields.String(attribute="creator.email", dump_only=True)
     project_name = fields.String(attribute="project.name", dump_only=True)

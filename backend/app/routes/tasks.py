@@ -38,10 +38,15 @@ def list_tasks():
     if not me_:
         return jsonify({"error": "user not found"}), 404
 
+    project_id = request.args.get("project_id", type=int)
+
     if me_.is_admin:
-        tasks = Task.query.order_by(Task.id.desc()).all()
+        query = Task.query
+        if project_id:
+            query = query.filter(Task.project_id == project_id)
+        tasks = query.order_by(Task.id.desc()).all()
     else:
-        tasks = (
+        query = (
             Task.query
             .outerjoin(ProjectMember, ProjectMember.project_id == Task.project_id)
             .outerjoin(TaskAssignee, TaskAssignee.task_id == Task.id)
@@ -50,10 +55,10 @@ def list_tasks():
                 | (ProjectMember.user_id == me_.id)
                 | (TaskAssignee.user_id == me_.id)
             )
-            .distinct()
-            .order_by(Task.id.desc())
-            .all()
         )
+        if project_id:
+            query = query.filter(Task.project_id == project_id)
+        tasks = query.distinct().order_by(Task.id.desc()).all()
     return jsonify(tasks_schema.dump(tasks)), 200
 
 

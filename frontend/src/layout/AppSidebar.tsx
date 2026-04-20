@@ -1,11 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { createPortal } from "react-dom";
 import { Link, useLocation } from "react-router";
 
 // Assume these icons are imported from an icon library
 import {
   BoxCubeIcon,
-  CalenderIcon,
   ChevronDownIcon,
   GridIcon,
   HorizontaLDots,
@@ -19,14 +17,9 @@ import {
   LogIcon,
   UsersIcon,
 } from "../icons";
-import { Modal } from "../components/ui/modal";
-import { useModal } from "../hooks/useModal";
-import Button from "../components/ui/button/Button";
-import Input from "../components/form/input/InputField";
-import Label from "../components/form/Label";
 import { useSidebar } from "../context/SidebarContext";
 import { useAuth } from "../context/AuthContext";
-import { projectsApi, usersApi, type UserItem } from "../services/api";
+import { projectsApi, type ProjectItem } from "../services/api";
 
 type NavItem = {
   name: string;
@@ -42,28 +35,28 @@ const navItems: NavItem[] = [
     path: "/",
   },
   {
-    icon: <CalenderIcon />,
-    name: "Calendar",
-    path: "/calendar",
-  },
-  {
-    icon: <TaskIcon />,
-    name: "Task",
-    path: "/tasks",
-  },
-  {
-    icon: <LogIcon />,
-    name: "Log",
-    path: "/log",
-  },
-  {
     icon: <UsersIcon />,
     name: "Users",
     path: "/users",
   },
   {
+    icon: <LogIcon />,
+    name: "Logs",
+    path: "/log",
+  },
+  {
+    icon: <ProjectIcon />,
+    name: "Projects",
+    path: "/projects",
+  },
+  {
+    icon: <TaskIcon />,
+    name: "My Tasks",
+    path: "/tasks",
+  },
+  {
     icon: <UserCircleIcon />,
-    name: "User Profile",
+    name: "Profile",
     path: "/profile",
   },
   {
@@ -112,59 +105,23 @@ const othersItems: NavItem[] = [
 const AppSidebar: React.FC = () => {
   const { isExpanded, isMobileOpen, isHovered, setIsHovered } = useSidebar();
   const { user } = useAuth();
-  const { isOpen, openModal, closeModal } = useModal();
-  const [projectName, setProjectName] = useState("");
-  const [leaderId, setLeaderId] = useState<number | null>(null);
-  const [leaderSearch, setLeaderSearch] = useState("");
-  const [leaderResults, setLeaderResults] = useState<UserItem[]>([]);
-  const [showDropdown, setShowDropdown] = useState(false);
-  const [projectError, setProjectError] = useState<string | null>(null);
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [projects, setProjects] = useState<ProjectItem[]>([]);
 
-  const handleLeaderSearch = (value: string) => {
-    setLeaderSearch(value);
-    setLeaderId(null);
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    if (!value.trim()) {
-      setLeaderResults([]);
-      setShowDropdown(false);
-      return;
-    }
-    debounceRef.current = setTimeout(async () => {
-      const result = await usersApi.search(value);
-      if (result.data) {
-        setLeaderResults(result.data);
-        setShowDropdown(true);
-      }
-    }, 300);
+  const fetchProjects = async () => {
+    const result = await projectsApi.list();
+    if (result.data) setProjects(result.data);
   };
 
-  const handleSelectLeader = (user: UserItem) => {
-    setLeaderId(user.id);
-    setLeaderSearch(user.email);
-    setLeaderResults([]);
-    setShowDropdown(false);
-  };
+  useEffect(() => {
+    fetchProjects();
+  }, []);
 
-  const handleCreateProject = async () => {
-    setProjectError(null);
-    if (!leaderId) {
-      setProjectError("Please select a leader.");
-      return;
-    }
-    const result = await projectsApi.create(projectName, leaderId);
-    if (result.error) {
-      setProjectError(result.error);
-      return;
-    }
-    setProjectName("");
-    setLeaderId(null);
-    setLeaderSearch("");
-    closeModal();
-  };
   const filteredNavItems = navItems.filter(
     (item) =>
-      (item.path !== "/users" && item.path !== "/log") || user?.is_admin,
+      (item.path !== "/users" &&
+        item.path !== "/log" &&
+        item.path !== "/projects") ||
+      user?.is_admin,
   );
   const location = useLocation();
 
@@ -356,9 +313,8 @@ const AppSidebar: React.FC = () => {
   );
 
   return (
-    <>
-      <aside
-        className={`fixed mt-16 flex flex-col lg:mt-0 top-0 px-5 left-0 bg-white dark:bg-gray-900 dark:border-gray-800 text-gray-900 h-screen transition-all duration-300 ease-in-out z-50 border-r border-gray-200 
+    <aside
+      className={`fixed mt-16 flex flex-col lg:mt-0 top-0 px-5 left-0 bg-white dark:bg-gray-900 dark:border-gray-800 text-gray-900 h-screen transition-all duration-300 ease-in-out z-50 border-r border-gray-200
         ${
           isExpanded || isMobileOpen
             ? "w-[290px]"
@@ -368,189 +324,123 @@ const AppSidebar: React.FC = () => {
         }
         ${isMobileOpen ? "translate-x-0" : "-translate-x-full"}
         lg:translate-x-0`}
-        onMouseEnter={() => !isExpanded && setIsHovered(true)}
-        onMouseLeave={() => setIsHovered(false)}
+      onMouseEnter={() => !isExpanded && setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
+      <div
+        className={`py-8 flex ${
+          !isExpanded && !isHovered ? "lg:justify-center" : "justify-start"
+        }`}
       >
-        <div
-          className={`py-8 flex ${
-            !isExpanded && !isHovered ? "lg:justify-center" : "justify-start"
-          }`}
-        >
-          <Link to="/">
-            {isExpanded || isHovered || isMobileOpen ? (
-              <>
-                <img
-                  className="dark:hidden"
-                  src="/images/logo/logo.svg"
-                  alt="Logo"
-                  width={150}
-                  height={40}
-                />
-                <img
-                  className="hidden dark:block"
-                  src="/images/logo/logo-dark.svg"
-                  alt="Logo"
-                  width={150}
-                  height={40}
-                />
-              </>
-            ) : (
+        <Link to="/">
+          {isExpanded || isHovered || isMobileOpen ? (
+            <>
               <img
-                src="/images/logo/logo-icon.svg"
+                className="dark:hidden"
+                src="/images/logo/logo.svg"
                 alt="Logo"
-                width={32}
-                height={32}
+                width={150}
+                height={40}
               />
-            )}
-          </Link>
-        </div>
-        <div className="flex flex-col overflow-y-auto duration-300 ease-linear no-scrollbar">
-          <nav className="mb-6">
-            <div className="flex flex-col gap-4">
-              <div>
-                <h2
-                  className={`mb-4 text-xs uppercase flex leading-[20px] text-gray-400 ${
-                    !isExpanded && !isHovered
-                      ? "lg:justify-center"
-                      : "justify-start"
-                  }`}
-                >
-                  {isExpanded || isHovered || isMobileOpen ? (
-                    "Menu"
-                  ) : (
-                    <HorizontaLDots className="size-6" />
-                  )}
-                </h2>
-                {renderMenuItems(filteredNavItems, "main")}
-              </div>
-              <div>
-                <h2
-                  className={`mb-4 text-xs uppercase flex leading-[20px] text-gray-400 ${
-                    !isExpanded && !isHovered
-                      ? "lg:justify-center"
-                      : "justify-start"
-                  }`}
-                >
-                  {isExpanded || isHovered || isMobileOpen ? (
-                    "Projects"
-                  ) : (
-                    <HorizontaLDots className="size-6" />
-                  )}
-                </h2>
-                <ul className="flex flex-col gap-4">
-                  {user?.is_admin && (
-                    <li>
-                      <button
-                        onClick={openModal}
-                        className={`menu-item group menu-item-inactive cursor-pointer ${
-                          !isExpanded && !isHovered
-                            ? "lg:justify-center"
-                            : "lg:justify-start"
+              <img
+                className="hidden dark:block"
+                src="/images/logo/logo-dark.svg"
+                alt="Logo"
+                width={150}
+                height={40}
+              />
+            </>
+          ) : (
+            <img
+              src="/images/logo/logo-icon.svg"
+              alt="Logo"
+              width={32}
+              height={32}
+            />
+          )}
+        </Link>
+      </div>
+      <div className="flex flex-col overflow-y-auto duration-300 ease-linear no-scrollbar">
+        <nav className="mb-6">
+          <div className="flex flex-col gap-4">
+            <div>
+              <h2
+                className={`mb-4 text-xs uppercase flex leading-[20px] text-gray-400 ${
+                  !isExpanded && !isHovered
+                    ? "lg:justify-center"
+                    : "justify-start"
+                }`}
+              >
+                {isExpanded || isHovered || isMobileOpen ? (
+                  "Menu"
+                ) : (
+                  <HorizontaLDots className="size-6" />
+                )}
+              </h2>
+              {renderMenuItems(filteredNavItems, "main")}
+            </div>
+            <div>
+              <h2
+                className={`mb-4 text-xs uppercase flex leading-[20px] text-gray-400 ${
+                  !isExpanded && !isHovered
+                    ? "lg:justify-center"
+                    : "justify-start"
+                }`}
+              >
+                {isExpanded || isHovered || isMobileOpen ? (
+                  "Projects"
+                ) : (
+                  <HorizontaLDots className="size-6" />
+                )}
+              </h2>
+              <ul className="flex flex-col gap-4">
+                {projects.map((project) => (
+                  <li key={project.id}>
+                    <Link
+                      to={`/project/${project.id}`}
+                      className={`menu-item group ${
+                        isActive(`/project/${project.id}`)
+                          ? "menu-item-active"
+                          : "menu-item-inactive"
+                      }`}
+                    >
+                      <span
+                        className={`menu-item-icon-size ${
+                          isActive(`/project/${project.id}`)
+                            ? "menu-item-icon-active"
+                            : "menu-item-icon-inactive"
                         }`}
                       >
-                        <span className="menu-item-icon-size menu-item-icon-inactive">
-                          <ProjectIcon />
-                        </span>
-                        {(isExpanded || isHovered || isMobileOpen) && (
-                          <span className="menu-item-text">New Project</span>
-                        )}
-                      </button>
-                    </li>
-                  )}
-                </ul>
-              </div>
-              <div className="">
-                <h2
-                  className={`mb-4 text-xs uppercase flex leading-[20px] text-gray-400 ${
-                    !isExpanded && !isHovered
-                      ? "lg:justify-center"
-                      : "justify-start"
-                  }`}
-                >
-                  {isExpanded || isHovered || isMobileOpen ? (
-                    "Others"
-                  ) : (
-                    <HorizontaLDots />
-                  )}
-                </h2>
-                {renderMenuItems(othersItems, "others")}
-              </div>
+                        <ProjectIcon />
+                      </span>
+                      {(isExpanded || isHovered || isMobileOpen) && (
+                        <span className="menu-item-text">{project.name}</span>
+                      )}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
             </div>
-          </nav>
-        </div>
-      </aside>
-
-      {createPortal(
-        <Modal
-          isOpen={isOpen}
-          onClose={closeModal}
-          className="max-w-[584px] m-4"
-        >
-          <div className="relative w-full rounded-3xl bg-white p-6 dark:bg-gray-900">
-            <h4 className="mb-6 text-lg font-semibold text-gray-800 dark:text-white/90">
-              New Project
-            </h4>
-            <form
-              className="flex flex-col"
-              onSubmit={(e) => e.preventDefault()}
-            >
-              <div className="grid grid-cols-1 gap-x-5 gap-y-5 sm:grid-cols-2">
-                <div className="sm:col-span-2">
-                  <Label>Name</Label>
-                  <Input
-                    type="text"
-                    placeholder="Enter project name"
-                    value={projectName}
-                    onChange={(e) => setProjectName(e.target.value)}
-                  />
-                </div>
-                <div className="sm:col-span-2 relative">
-                  <Label>Select Leader</Label>
-                  <Input
-                    type="text"
-                    placeholder="Search by email"
-                    value={leaderSearch}
-                    onChange={(e) => handleLeaderSearch(e.target.value)}
-                  />
-                  {showDropdown && leaderResults.length > 0 && (
-                    <ul className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg max-h-48 overflow-y-auto">
-                      {leaderResults.map((u) => (
-                        <li
-                          key={u.id}
-                          onClick={() => handleSelectLeader(u)}
-                          className="px-4 py-2 cursor-pointer text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
-                        >
-                          {u.email}
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                  {showDropdown &&
-                    leaderResults.length === 0 &&
-                    leaderSearch.trim() && (
-                      <div className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg px-4 py-2 text-sm text-gray-500 dark:text-gray-400">
-                        No users found.
-                      </div>
-                    )}
-                </div>
-              </div>
-              {projectError && (
-                <p className="mt-3 text-sm text-red-500">{projectError}</p>
-              )}
-              <div className="mt-6 flex items-center justify-end gap-3">
-                <Button size="sm" variant="outline" onClick={closeModal}>
-                  Cancel
-                </Button>
-                <Button size="sm" onClick={handleCreateProject}>
-                  Save
-                </Button>
-              </div>
-            </form>
+            <div className="">
+              <h2
+                className={`mb-4 text-xs uppercase flex leading-[20px] text-gray-400 ${
+                  !isExpanded && !isHovered
+                    ? "lg:justify-center"
+                    : "justify-start"
+                }`}
+              >
+                {isExpanded || isHovered || isMobileOpen ? (
+                  "Others"
+                ) : (
+                  <HorizontaLDots />
+                )}
+              </h2>
+              {renderMenuItems(othersItems, "others")}
+            </div>
           </div>
-        </Modal>,
-        document.body,
-      )}
-    </>
+        </nav>
+      </div>
+    </aside>
   );
 };
 

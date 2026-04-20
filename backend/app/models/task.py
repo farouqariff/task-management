@@ -8,7 +8,7 @@ class Task(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(200), nullable=False)
-    status = db.Column(db.String(20), nullable=False, default="pending")
+    status = db.Column(db.String(20), nullable=False, default="todo")
     priority = db.Column(db.String(20), nullable=False, default="low")
     project_id = db.Column(db.Integer, db.ForeignKey("projects.id"), nullable=False, index=True)
     created_by = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)

@@ -71,11 +71,7 @@ export default function Users() {
         />
       )}
 
-      <Modal
-        isOpen={isOpen}
-        onClose={closeModal}
-        className="max-w-[584px] m-4"
-      >
+      <Modal isOpen={isOpen} onClose={closeModal} className="max-w-[584px] m-4">
         <div className="relative w-full rounded-3xl bg-white p-6 dark:bg-gray-900">
           <h4 className="mb-6 text-lg font-semibold text-gray-800 dark:text-white/90">
             Personal Information
@@ -90,17 +86,9 @@ export default function Users() {
                 <Label>Last Name</Label>
                 <Input type="text" placeholder="Chowdhury" />
               </div>
-              <div>
+              <div className="sm:col-span-2">
                 <Label>Email Address</Label>
                 <Input type="text" placeholder="randomuser@pimjo.com" />
-              </div>
-              <div>
-                <Label>Phone</Label>
-                <Input type="text" placeholder="+09 363 398 46" />
-              </div>
-              <div className="sm:col-span-2">
-                <Label>Bio</Label>
-                <Input type="text" placeholder="Team Manager" />
               </div>
             </div>
             <div className="mt-6 flex items-center justify-end gap-3">

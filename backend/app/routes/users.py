@@ -15,9 +15,12 @@ update_schema = UserUpdateSchema()
 
 
 @bp.get("")
-@admin_required
+@jwt_required()
 def list_users():
+    me_ = current_user()
     search = request.args.get("search", "").strip()
+    if not search and not me_.is_admin:
+        return jsonify({"error": "admin only"}), 403
     query = User.query
     if search:
         query = query.filter(User.email.ilike(f"%{search}%"))

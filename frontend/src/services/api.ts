@@ -84,11 +84,79 @@ export interface ProjectItem {
   created_at: string;
 }
 
+export interface ProjectMemberItem {
+  id: number;
+  project_id: number;
+  user_id: number;
+  user_email: string;
+  user_full_name: string;
+  role: "leader" | "member";
+  added_at: string;
+}
+
 export const projectsApi = {
+  list: () => request<ProjectItem[]>("/projects"),
   create: (name: string, leader_id: number) =>
     request<ProjectItem>("/projects", {
       method: "POST",
       body: JSON.stringify({ name, leader_id }),
+    }),
+  getMembers: (project_id: number) =>
+    request<ProjectMemberItem[]>(`/projects/${project_id}/members`),
+  addMember: (project_id: number, user_id: number, role: string) =>
+    request(`/projects/${project_id}/members`, {
+      method: "POST",
+      body: JSON.stringify({ user_id, role }),
+    }),
+};
+
+export interface TaskAssigneeItem {
+  id: number;
+  task_id: number;
+  user_id: number;
+  user_email: string;
+  user_full_name: string;
+  assigned_at: string;
+}
+
+export interface TaskItem {
+  id: number;
+  name: string;
+  status: "todo" | "completed";
+  priority: "low" | "medium" | "high";
+  project_id: number;
+  created_by: number;
+  due_date: string | null;
+  created_at: string;
+  updated_at: string;
+  creator_email: string;
+  project_name: string;
+  assignees: TaskAssigneeItem[];
+}
+
+export const tasksApi = {
+  list: (project_id: number) =>
+    request<TaskItem[]>(`/tasks?project_id=${project_id}`),
+  create: (data: {
+    name: string;
+    status: string;
+    priority: string;
+    project_id: number;
+    due_date?: string;
+  }) =>
+    request<TaskItem>("/tasks", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+  update: (task_id: number, data: Partial<Pick<TaskItem, "status" | "priority">>) =>
+    request<TaskItem>(`/tasks/${task_id}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    }),
+  addAssignee: (task_id: number, user_id: number) =>
+    request(`/tasks/${task_id}/assignees`, {
+      method: "POST",
+      body: JSON.stringify({ user_id }),
     }),
 };
 

@@ -12,7 +12,6 @@ import Avatars from "./pages/UiElements/Avatars";
 import Buttons from "./pages/UiElements/Buttons";
 import LineChart from "./pages/Charts/LineChart";
 import BarChart from "./pages/Charts/BarChart";
-import Calendar from "./pages/Calendar";
 import BasicTables from "./pages/Tables/BasicTables";
 import FormElements from "./pages/Forms/FormElements";
 import Blank from "./pages/Blank";
@@ -22,8 +21,10 @@ import Home from "./pages/Dashboard/Home";
 import ResetPassword from "./pages/AuthPages/ResetPassword";
 import NewPassword from "./pages/AuthPages/NewPassword";
 import Log from "./pages/Log";
-import Task from "./pages/Task";
+import Task from "./pages/MyTasks";
 import Users from "./pages/Users";
+import Projects from "./pages/Projects/Index";
+import ProjectDetail from "./pages/ProjectDetail";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 
 function PrivateRoute({ children }: { children: ReactNode }) {
@@ -38,7 +39,11 @@ function PublicRoute({ children }: { children: ReactNode }) {
 
 function AdminRoute({ children }: { children: ReactNode }) {
   const { user } = useAuth();
-  return user?.is_admin ? <>{children}</> : <Navigate to="/error-401" replace />;
+  return user?.is_admin ? (
+    <>{children}</>
+  ) : (
+    <Navigate to="/error-401" replace />
+  );
 }
 
 export default function App() {
@@ -58,17 +63,41 @@ export default function App() {
             <Route index path="/" element={<Home />} />
 
             {/* Admin Pages */}
-            <Route path="/log" element={<AdminRoute><Log /></AdminRoute>} />
-            <Route path="/users" element={<AdminRoute><Users /></AdminRoute>} />
+            <Route
+              path="/log"
+              element={
+                <AdminRoute>
+                  <Log />
+                </AdminRoute>
+              }
+            />
+            <Route
+              path="/users"
+              element={
+                <AdminRoute>
+                  <Users />
+                </AdminRoute>
+              }
+            />
+            <Route
+              path="/projects"
+              element={
+                <AdminRoute>
+                  <Projects />
+                </AdminRoute>
+              }
+            />
 
             {/* Task */}
             <Route path="/tasks" element={<Task />} />
+
+            {/* Project Detail */}
+            <Route path="/project/:id" element={<ProjectDetail />} />
 
             {/* Profile */}
             <Route path="/profile" element={<UserProfiles />} />
 
             {/* Others */}
-            <Route path="/calendar" element={<Calendar />} />
             <Route path="/blank" element={<Blank />} />
             <Route path="/form-elements" element={<FormElements />} />
             <Route path="/basic-tables" element={<BasicTables />} />

@@ -248,16 +248,6 @@ export default function DataTable<T>({
                   {(onEdit || onDelete) && (
                     <TableCell className="px-5 py-4 text-start">
                       <div className="flex items-center gap-3">
-                        {onDelete && (
-                          <button
-                            type="button"
-                            onClick={() => onDelete(row)}
-                            className="text-gray-400 transition-colors hover:text-error-500"
-                            aria-label="Delete"
-                          >
-                            <TrashBinIcon className="size-5" />
-                          </button>
-                        )}
                         {onEdit && (
                           <button
                             type="button"
@@ -266,6 +256,16 @@ export default function DataTable<T>({
                             aria-label="Edit"
                           >
                             <PencilIcon className="size-5" />
+                          </button>
+                        )}
+                        {onDelete && (
+                          <button
+                            type="button"
+                            onClick={() => onDelete(row)}
+                            className="text-gray-400 transition-colors hover:text-error-500"
+                            aria-label="Delete"
+                          >
+                            <TrashBinIcon className="size-5" />
                           </button>
                         )}
                       </div>
