@@ -12,6 +12,7 @@ import {
   AngleUpIcon,
   PencilIcon,
   TrashBinIcon,
+  ViewIcon,
 } from "../../../icons";
 import Button from "../../ui/button/Button";
 
@@ -27,6 +28,7 @@ interface DataTableProps<T> {
   data: T[];
   columns: Column<T>[];
   searchable?: (row: T) => string;
+  onView?: (row: T) => void;
   onEdit?: (row: T) => void;
   onDelete?: (row: T) => void;
   canDelete?: (row: T) => boolean;
@@ -42,6 +44,7 @@ export default function DataTable<T>({
   data,
   columns,
   searchable,
+  onView,
   onEdit,
   onDelete,
   canDelete,
@@ -214,7 +217,7 @@ export default function DataTable<T>({
                   )}
                 </TableCell>
               ))}
-              {(onEdit || onDelete) && (
+              {(onView || onEdit || onDelete) && (
                 <TableCell
                   isHeader
                   className="px-5 py-3 text-start text-theme-xs font-medium text-gray-500 dark:text-gray-400"
@@ -247,9 +250,19 @@ export default function DataTable<T>({
                           : ""}
                     </TableCell>
                   ))}
-                  {(onEdit || onDelete) && (
+                  {(onView || onEdit || onDelete) && (
                     <TableCell className="px-5 py-4 text-start">
                       <div className="flex items-center gap-3">
+                        {onView && (
+                          <button
+                            type="button"
+                            onClick={() => onView(row)}
+                            className="text-gray-400 transition-colors hover:text-brand-500"
+                            aria-label="View"
+                          >
+                            <ViewIcon className="size-5" />
+                          </button>
+                        )}
                         {onEdit && (
                           <button
                             type="button"

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router";
 import PageBreadcrumb from "../../components/common/PageBreadCrumb";
 import PageMeta from "../../components/common/PageMeta";
 import DataTable, { Column } from "../../components/tables/DataTable/DataTable";
@@ -48,6 +49,7 @@ const columns: Column<ProjectItem>[] = [
 const searchProject = (row: ProjectItem) => row.name;
 
 export default function Projects() {
+  const navigate = useNavigate();
   const [projects, setProjects] = useState<ProjectItem[]>([]);
   const [loading, setLoading] = useState(true);
   const { isOpen, openModal, closeModal } = useModal();
@@ -129,6 +131,7 @@ export default function Projects() {
           data={projects}
           columns={columns}
           searchable={searchProject}
+          onView={(row) => navigate(`/project/${row.id}`)}
           onEdit={(row) => console.log("edit project", row.id)}
           onDelete={(row) => console.log("delete project", row.id)}
           addButtonLabel="Add New Project"

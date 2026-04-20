@@ -47,6 +47,7 @@ export interface UserItem {
   last_name: string;
   full_name: string;
   email: string;
+  is_admin: boolean;
 }
 
 export const usersApi = {
@@ -163,7 +164,6 @@ export const tasksApi = {
     request<TaskItem[]>(`/tasks?project_id=${project_id}`),
   create: (data: {
     name: string;
-    status: string;
     priority: string;
     project_id: number;
     due_date?: string;
@@ -177,6 +177,8 @@ export const tasksApi = {
       method: "PUT",
       body: JSON.stringify(data),
     }),
+  delete: (task_id: number) =>
+    request<{ msg: string; id: number }>(`/tasks/${task_id}`, { method: "DELETE" }),
   addAssignee: (task_id: number, user_id: number) =>
     request(`/tasks/${task_id}/assignees`, {
       method: "POST",

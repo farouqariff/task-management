@@ -3,7 +3,7 @@ import { useParams } from "react-router";
 import PageBreadcrumb from "../../components/common/PageBreadCrumb";
 import PageMeta from "../../components/common/PageMeta";
 import Badge from "../../components/ui/badge/Badge";
-import { AddIcon, CalenderIcon, HorizontaLDots } from "../../icons";
+import { AddIcon, CalenderIcon, LoadingIcon } from "../../icons";
 import Button from "../../components/ui/button/Button";
 import { Modal } from "../../components/ui/modal";
 import { useModal } from "../../hooks/useModal";
@@ -24,17 +24,25 @@ import { useAuth } from "../../context/AuthContext";
 type TabKey = "todo" | "completed" | "team-members";
 
 const tabs: { key: TabKey; label: string }[] = [
-  { key: "todo", label: "To do" },
+  { key: "todo", label: "To Do" },
   { key: "completed", label: "Completed" },
   { key: "team-members", label: "Team Members" },
 ];
 
+const PRIORITY_ORDER: Record<string, number> = { high: 0, medium: 1, low: 2 };
+
+function formatDate(dateStr: string): string {
+  const [year, month, day] = dateStr.split("T")[0].split("-");
+  return `${parseInt(day)}/${parseInt(month)}/${year}`;
+}
+
 interface TaskRowProps {
   task: TaskItem;
   onToggle: (task: TaskItem) => void;
+  onDelete: (task: TaskItem) => void;
 }
 
-const TaskRow: React.FC<TaskRowProps> = ({ task, onToggle }) => {
+const TaskRow: React.FC<TaskRowProps> = ({ task, onToggle, onDelete }) => {
   const completed = task.status === "completed";
   return (
     <div className="flex flex-wrap items-center gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3 transition hover:border-gray-300 dark:border-gray-800 dark:bg-white/[0.03] dark:hover:border-gray-700">
@@ -99,7 +107,7 @@ const TaskRow: React.FC<TaskRowProps> = ({ task, onToggle }) => {
         {task.due_date && (
           <span className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
             <CalenderIcon className="h-4 w-4" />
-            {new Date(task.due_date).toLocaleDateString()}
+            {formatDate(task.due_date)}
           </span>
         )}
 
@@ -114,6 +122,29 @@ const TaskRow: React.FC<TaskRowProps> = ({ task, onToggle }) => {
             </div>
           ))}
         </div>
+
+        <button
+          type="button"
+          onClick={() => onDelete(task)}
+          className="flex h-7 w-7 items-center justify-center rounded-md text-gray-400 transition hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-500/10 dark:hover:text-red-400"
+          title="Delete task"
+        >
+          <svg
+            width="15"
+            height="15"
+            viewBox="0 0 15 15"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M5.5 1.5H9.5M1.5 3.5H13.5M12.5 3.5L11.688 12.618C11.619 13.393 10.972 14 10.194 14H4.806C4.028 14 3.381 13.393 3.312 12.618L2.5 3.5"
+              stroke="currentColor"
+              strokeWidth="1.3"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </button>
       </div>
     </div>
   );
@@ -125,6 +156,7 @@ interface TaskSectionProps {
   countColor: "warning" | "info" | "success" | "light";
   tasks: TaskItem[];
   onToggle: (task: TaskItem) => void;
+  onDelete: (task: TaskItem) => void;
 }
 
 const TaskSection: React.FC<TaskSectionProps> = ({
@@ -133,6 +165,7 @@ const TaskSection: React.FC<TaskSectionProps> = ({
   countColor,
   tasks,
   onToggle,
+  onDelete,
 }) => {
   if (tasks.length === 0) return null;
 
@@ -147,17 +180,15 @@ const TaskSection: React.FC<TaskSectionProps> = ({
             {count}
           </Badge>
         </div>
-        <button
-          type="button"
-          className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-          aria-label="Section options"
-        >
-          <HorizontaLDots className="h-5 w-5" />
-        </button>
       </div>
       <div className="space-y-3">
         {tasks.map((task) => (
-          <TaskRow key={task.id} task={task} onToggle={onToggle} />
+          <TaskRow
+            key={task.id}
+            task={task}
+            onToggle={onToggle}
+            onDelete={onDelete}
+          />
         ))}
       </div>
     </div>
@@ -170,6 +201,7 @@ export default function ProjectDetail() {
 
   const { user: currentUser } = useAuth();
 
+  const [loading, setLoading] = useState(true);
   const [tasks, setTasks] = useState<TaskItem[]>([]);
   const [members, setMembers] = useState<ProjectMemberItem[]>([]);
   const [activeTab, setActiveTab] = useState<TabKey>("todo");
@@ -195,7 +227,6 @@ export default function ProjectDetail() {
     members.some((m) => m.user_id === currentUser?.id && m.role === "leader");
 
   const [taskName, setTaskName] = useState("");
-  const [taskStatus, setTaskStatus] = useState<"todo" | "completed">("todo");
   const [taskPriority, setTaskPriority] = useState<"low" | "medium" | "high">(
     "low",
   );
@@ -213,11 +244,13 @@ export default function ProjectDetail() {
   };
 
   useEffect(() => {
-    tasksApi.list(projectId).then((result) => {
-      if (result.data) setTasks(result.data);
-    });
-    projectsApi.getMembers(projectId).then((result) => {
-      if (result.data) setMembers(result.data);
+    Promise.all([
+      tasksApi.list(projectId),
+      projectsApi.getMembers(projectId),
+    ]).then(([tasksResult, membersResult]) => {
+      if (tasksResult.data) setTasks(tasksResult.data);
+      if (membersResult.data) setMembers(membersResult.data);
+      setLoading(false);
     });
   }, [projectId]);
 
@@ -252,7 +285,10 @@ export default function ProjectDetail() {
     newMemberDebounceRef.current = setTimeout(async () => {
       const result = await usersApi.search(value);
       if (result.data) {
-        setNewMemberResults(result.data);
+        const filtered = result.data.filter(
+          (u) => !u.is_admin && !members.some((m) => m.user_id === u.id),
+        );
+        setNewMemberResults(filtered);
         setShowNewMemberDropdown(true);
       }
     }, 300);
@@ -300,7 +336,6 @@ export default function ProjectDetail() {
 
   const handleModalClose = () => {
     setTaskName("");
-    setTaskStatus("todo");
     setTaskPriority("low");
     setTaskDueDate("");
     setSelectedAssignees([]);
@@ -318,7 +353,6 @@ export default function ProjectDetail() {
     setSaving(true);
     const result = await tasksApi.create({
       name: taskName.trim(),
-      status: taskStatus,
       priority: taskPriority,
       project_id: projectId,
       ...(taskDueDate ? { due_date: taskDueDate } : {}),
@@ -346,6 +380,11 @@ export default function ProjectDetail() {
     await tasksApi.update(task.id, { status: newStatus });
   };
 
+  const handleDeleteTask = async (task: TaskItem) => {
+    setTasks((prev) => prev.filter((t) => t.id !== task.id));
+    await tasksApi.delete(task.id);
+  };
+
   const counts = useMemo(
     () => ({
       todo: tasks.filter((t) => t.status === "todo").length,
@@ -354,13 +393,21 @@ export default function ProjectDetail() {
     [tasks],
   );
 
-  const visibleTasks = useMemo(
-    () =>
-      activeTab === "team-members"
-        ? []
-        : tasks.filter((t) => t.status === activeTab),
-    [tasks, activeTab],
-  );
+  const visibleTasks = useMemo(() => {
+    if (activeTab === "team-members") return [];
+    return tasks
+      .filter((t) => t.status === activeTab)
+      .sort((a, b) => {
+        const aDate = a.due_date ? a.due_date.split("T")[0] : null;
+        const bDate = b.due_date ? b.due_date.split("T")[0] : null;
+        if (aDate !== bDate) {
+          if (!aDate) return 1;
+          if (!bDate) return -1;
+          return aDate < bDate ? -1 : 1;
+        }
+        return PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority];
+      });
+  }, [tasks, activeTab]);
 
   return (
     <>
@@ -370,122 +417,130 @@ export default function ProjectDetail() {
       />
       <PageBreadcrumb pageTitle="Project Tasks" />
 
-      <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] xl:p-6">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="inline-flex items-center gap-1 rounded-lg bg-gray-100 p-1 dark:bg-gray-900">
-            {tabs.map((tab) => {
-              const isActive = activeTab === tab.key;
-              return (
-                <button
-                  key={tab.key}
-                  onClick={() => setActiveTab(tab.key)}
-                  className={`inline-flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition ${
-                    isActive
-                      ? "bg-white text-gray-900 shadow-theme-xs ring-1 ring-gray-200 dark:bg-gray-800 dark:text-white dark:ring-gray-700"
-                      : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-                  }`}
-                >
-                  {tab.label}
-                  {tab.key !== "team-members" && (
-                    <span
-                      className={`inline-flex h-5 min-w-[20px] items-center justify-center rounded-full px-1.5 text-xs font-medium ${
-                        isActive
-                          ? "bg-brand-50 text-brand-500 dark:bg-brand-500/15 dark:text-brand-400"
-                          : "bg-white text-gray-500 dark:bg-gray-800 dark:text-gray-400"
-                      }`}
-                    >
-                      {counts[tab.key as "todo" | "completed"]}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-          </div>
+      {loading ? (
+        <div className="flex items-center justify-center py-20">
+          <LoadingIcon className="size-150 animate-spin text-brand-500" />
+        </div>
+      ) : (
+        <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] xl:p-6">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="inline-flex items-center gap-1 rounded-lg bg-gray-100 p-1 dark:bg-gray-900">
+              {tabs.map((tab) => {
+                const isActive = activeTab === tab.key;
+                return (
+                  <button
+                    key={tab.key}
+                    onClick={() => setActiveTab(tab.key)}
+                    className={`inline-flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition ${
+                      isActive
+                        ? "bg-white text-gray-900 shadow-theme-xs ring-1 ring-gray-200 dark:bg-gray-800 dark:text-white dark:ring-gray-700"
+                        : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                    }`}
+                  >
+                    {tab.label}
+                    {tab.key !== "team-members" && (
+                      <span
+                        className={`inline-flex h-5 min-w-[20px] items-center justify-center rounded-full px-1.5 text-xs font-medium ${
+                          isActive
+                            ? "bg-brand-50 text-brand-500 dark:bg-brand-500/15 dark:text-brand-400"
+                            : "bg-white text-gray-500 dark:bg-gray-800 dark:text-gray-400"
+                        }`}
+                      >
+                        {counts[tab.key as "todo" | "completed"]}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
 
-          {activeTab === "team-members" ? (
-            canManage && (
+            {activeTab === "team-members" ? (
+              canManage && (
+                <Button
+                  size="sm"
+                  variant="primary"
+                  endIcon={<AddIcon className="size-5" />}
+                  onClick={openMemberModal}
+                >
+                  Add Member
+                </Button>
+              )
+            ) : (
               <Button
                 size="sm"
                 variant="primary"
                 endIcon={<AddIcon className="size-5" />}
-                onClick={openMemberModal}
+                onClick={openModal}
               >
-                Add Member
+                Add New Task
               </Button>
-            )
-          ) : (
-            <Button
-              size="sm"
-              variant="primary"
-              endIcon={<AddIcon className="size-5" />}
-              onClick={openModal}
-            >
-              Add New Task
-            </Button>
-          )}
-        </div>
+            )}
+          </div>
 
-        <div className="mt-6 space-y-8">
-          {activeTab === "team-members" ? (
-            <div className="space-y-4">
-              {members.length === 0 ? (
-                <div className="py-12 text-center text-sm text-gray-500 dark:text-gray-400">
-                  No members yet.
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {members.map((m) => (
-                    <div
-                      key={m.user_id}
-                      className="flex items-center gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3 dark:border-gray-800 dark:bg-white/[0.03]"
-                    >
-                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-100 text-sm font-medium text-brand-700 dark:bg-brand-500/20 dark:text-brand-400">
-                        {m.user_email[0].toUpperCase()}
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-800 dark:text-white/90">
-                          {m.user_full_name}
-                        </p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">
-                          {m.user_email}
-                        </p>
-                      </div>
-                      <Badge
-                        size="sm"
-                        color={m.role === "leader" ? "primary" : "light"}
+          <div className="mt-6 space-y-8">
+            {activeTab === "team-members" ? (
+              <div className="space-y-4">
+                {members.length === 0 ? (
+                  <div className="py-12 text-center text-sm text-gray-500 dark:text-gray-400">
+                    No members yet.
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {members.map((m) => (
+                      <div
+                        key={m.user_id}
+                        className="flex items-center gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3 dark:border-gray-800 dark:bg-white/[0.03]"
                       >
-                        {m.role}
-                      </Badge>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          ) : (
-            <>
-              <TaskSection
-                title="To Do"
-                count={counts.todo}
-                countColor="light"
-                tasks={visibleTasks.filter((t) => t.status === "todo")}
-                onToggle={toggleTask}
-              />
-              <TaskSection
-                title="Completed"
-                count={counts.completed}
-                countColor="success"
-                tasks={visibleTasks.filter((t) => t.status === "completed")}
-                onToggle={toggleTask}
-              />
-              {visibleTasks.length === 0 && (
-                <div className="py-12 text-center text-sm text-gray-500 dark:text-gray-400">
-                  No tasks in this category yet.
-                </div>
-              )}
-            </>
-          )}
+                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-100 text-sm font-medium text-brand-700 dark:bg-brand-500/20 dark:text-brand-400">
+                          {m.user_email[0].toUpperCase()}
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-gray-800 dark:text-white/90">
+                            {m.user_full_name}
+                          </p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">
+                            {m.user_email}
+                          </p>
+                        </div>
+                        <Badge
+                          size="sm"
+                          color={m.role === "leader" ? "primary" : "light"}
+                        >
+                          {m.role}
+                        </Badge>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <>
+                <TaskSection
+                  title="To Do"
+                  count={counts.todo}
+                  countColor="light"
+                  tasks={visibleTasks.filter((t) => t.status === "todo")}
+                  onToggle={toggleTask}
+                  onDelete={handleDeleteTask}
+                />
+                <TaskSection
+                  title="Completed"
+                  count={counts.completed}
+                  countColor="success"
+                  tasks={visibleTasks.filter((t) => t.status === "completed")}
+                  onToggle={toggleTask}
+                  onDelete={handleDeleteTask}
+                />
+                {visibleTasks.length === 0 && (
+                  <div className="py-12 text-center text-sm text-gray-500 dark:text-gray-400">
+                    No tasks in this category yet.
+                  </div>
+                )}
+              </>
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
       <Modal
         isOpen={isMemberOpen}
@@ -572,20 +627,6 @@ export default function ProjectDetail() {
                 />
               </div>
               <div>
-                <Label>Select Status</Label>
-                <Select
-                  options={[
-                    { value: "todo", label: "To Do" },
-                    { value: "completed", label: "Completed" },
-                  ]}
-                  placeholder="Select an option"
-                  onChange={(value) =>
-                    setTaskStatus(value as "todo" | "completed")
-                  }
-                  className="dark:bg-dark-900"
-                />
-              </div>
-              <div>
                 <Label>Select Priority</Label>
                 <Select
                   options={[
@@ -600,11 +641,12 @@ export default function ProjectDetail() {
                   className="dark:bg-dark-900"
                 />
               </div>
-              <div className="sm:col-span-2">
+              <div>
                 <DatePicker
                   id="date-picker"
                   label="Due date"
                   placeholder="Select a date"
+                  minDate="today"
                   onChange={(_dates, dateStr) => setTaskDueDate(dateStr)}
                 />
               </div>

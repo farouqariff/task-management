@@ -2,12 +2,7 @@ import { useMemo, useState } from "react";
 import PageBreadcrumb from "../components/common/PageBreadCrumb";
 import PageMeta from "../components/common/PageMeta";
 import Badge from "../components/ui/badge/Badge";
-import {
-  CalenderIcon,
-  ChatIcon,
-  HorizontaLDots,
-  PlusIcon,
-} from "../icons";
+import { CalenderIcon, ChatIcon, HorizontaLDots, PlusIcon } from "../icons";
 
 type TaskStatus = "todo" | "in-progress" | "completed";
 
@@ -144,9 +139,7 @@ const initialTasks: TaskItem[] = [
 type TabKey = "all" | "todo" | "in-progress" | "completed";
 
 const tabs: { key: TabKey; label: string }[] = [
-  { key: "all", label: "All Tasks" },
-  { key: "todo", label: "To do" },
-  { key: "in-progress", label: "In Progress" },
+  { key: "todo", label: "To Do" },
   { key: "completed", label: "Completed" },
 ];
 

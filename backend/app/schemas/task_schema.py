@@ -27,7 +27,7 @@ class TaskSchema(ma.SQLAlchemyAutoSchema):
         sqla_session = db.session
         dump_only = ("id", "created_by", "created_at", "updated_at")
 
-    status = ma.auto_field(validate=validate.OneOf(ALLOWED_STATUSES))
+    status = ma.auto_field(validate=validate.OneOf(ALLOWED_STATUSES), load_default="todo")
     priority = ma.auto_field(validate=validate.OneOf(ALLOWED_PRIORITIES))
     due_date = fields.Date(allow_none=True, format="iso")
 

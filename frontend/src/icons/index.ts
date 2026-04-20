@@ -59,6 +59,7 @@ import { ReactComponent as UsersIcon } from "./users.svg?react";
 import { ReactComponent as AddIcon } from "./add.svg?react";
 import { ReactComponent as LoadingIcon } from "./loading.svg?react";
 import { ReactComponent as ProjectIcon } from "./project.svg?react";
+import { ReactComponent as ViewIcon } from "./view.svg?react";
 
 export {
   ErrorHexaIcon,
@@ -122,4 +123,5 @@ export {
   AddIcon,
   LoadingIcon,
   ProjectIcon,
+  ViewIcon,
 };

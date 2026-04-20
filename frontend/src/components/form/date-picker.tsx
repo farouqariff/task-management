@@ -11,6 +11,7 @@ type PropsType = {
   mode?: "single" | "multiple" | "range" | "time";
   onChange?: Hook | Hook[];
   defaultDate?: DateOption;
+  minDate?: DateOption;
   label?: string;
   placeholder?: string;
 };
@@ -21,6 +22,7 @@ export default function DatePicker({
   onChange,
   label,
   defaultDate,
+  minDate,
   placeholder,
 }: PropsType) {
   useEffect(() => {
@@ -30,6 +32,7 @@ export default function DatePicker({
       monthSelectorType: "static",
       dateFormat: "Y-m-d",
       defaultDate,
+      minDate,
       onChange,
     });
 
