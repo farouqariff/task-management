@@ -1,15 +1,15 @@
 import { useEffect, useState } from "react";
-import PageBreadcrumb from "../components/common/PageBreadCrumb";
-import PageMeta from "../components/common/PageMeta";
-import DataTable, { Column } from "../components/tables/DataTable/DataTable";
-import { usersApi, type UserItem } from "../services/api";
-import { LoadingIcon } from "../icons";
-import { Modal } from "../components/ui/modal";
-import { useModal } from "../hooks/useModal";
-import Button from "../components/ui/button/Button";
-import Input from "../components/form/input/InputField";
-import Label from "../components/form/Label";
-import { useAuth } from "../context/AuthContext";
+import PageBreadcrumb from "../../components/common/PageBreadCrumb";
+import PageMeta from "../../components/common/PageMeta";
+import DataTable, { Column } from "../../components/tables/DataTable/DataTable";
+import { usersApi, type UserItem } from "../../services/api";
+import { LoadingIcon } from "../../icons";
+import { Modal } from "../../components/ui/modal";
+import { useModal } from "../../hooks/useModal";
+import Button from "../../components/ui/button/Button";
+import Input from "../../components/form/input/InputField";
+import Label from "../../components/form/Label";
+import { useAuth } from "../../context/AuthContext";
 
 const columns: Column<UserItem>[] = [
   {

@@ -2,18 +2,19 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router";
 import type { ReactNode } from "react";
 import SignIn from "./pages/AuthPages/SignIn";
 import SignUp from "./pages/AuthPages/SignUp";
-import NotFound from "./pages/OtherPage/NotFound";
-import UserProfiles from "./pages/UserProfiles";
+import NotFound from "./pages/ErrorPages/NotFound";
+import Profile from "./pages/Users/Profile";
 import AppLayout from "./layout/AppLayout";
 import { ScrollToTop } from "./components/common/ScrollToTop";
 import ResetPassword from "./pages/AuthPages/ResetPassword";
 import NewPassword from "./pages/AuthPages/NewPassword";
 import Log from "./pages/Log";
 import Task from "./pages/MyTasks";
-import Users from "./pages/Users";
+import Users from "./pages/Users/Index";
 import Projects from "./pages/Projects/Index";
-import ProjectDetail from "./pages/ProjectDetail";
+import ProjectDetail from "./pages/Projects/ProjectDetail";
 import { AuthProvider, useAuth } from "./context/AuthContext";
+import Unauthorized from "./pages/ErrorPages/Unauthorized";
 
 function PrivateRoute({ children }: { children: ReactNode }) {
   const { isAuthenticated } = useAuth();
@@ -83,7 +84,7 @@ export default function App() {
             <Route path="/project/:id" element={<ProjectDetail />} />
 
             {/* Profile */}
-            <Route path="/profile" element={<UserProfiles />} />
+            <Route path="/profile" element={<Profile />} />
           </Route>
 
           {/* Public Auth Routes — redirect to dashboard if already logged in */}
@@ -107,7 +108,7 @@ export default function App() {
           <Route path="/new-password" element={<NewPassword />} />
 
           {/* Fallback */}
-          <Route path="/error-401" element={<NotFound />} />
+          <Route path="/error-401" element={<Unauthorized />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </Router>

@@ -24,6 +24,16 @@ type NavItem = {
 
 const navItems: NavItem[] = [
   {
+    icon: <TaskIcon />,
+    name: "My Tasks",
+    path: "/tasks",
+  },
+  {
+    icon: <ProjectIcon />,
+    name: "Projects",
+    path: "/projects",
+  },
+  {
     icon: <UsersIcon />,
     name: "Users",
     path: "/users",
@@ -34,22 +44,11 @@ const navItems: NavItem[] = [
     path: "/log",
   },
   {
-    icon: <ProjectIcon />,
-    name: "Projects",
-    path: "/projects",
-  },
-  {
-    icon: <TaskIcon />,
-    name: "My Tasks",
-    path: "/tasks",
-  },
-  {
     icon: <UserCircleIcon />,
     name: "Profile",
     path: "/profile",
   },
 ];
-
 
 const AppSidebar: React.FC = () => {
   const { isExpanded, isMobileOpen, isHovered, setIsHovered } = useSidebar();
@@ -322,52 +321,55 @@ const AppSidebar: React.FC = () => {
               </h2>
               {renderMenuItems(filteredNavItems, "main")}
             </div>
-            {!user?.is_admin && projects.filter((p) => !p.is_completed).length > 0 && (
-              <div>
-                <h2
-                  className={`mb-4 text-xs uppercase flex leading-[20px] text-gray-400 ${
-                    !isExpanded && !isHovered
-                      ? "lg:justify-center"
-                      : "justify-start"
-                  }`}
-                >
-                  {isExpanded || isHovered || isMobileOpen ? (
-                    "Projects"
-                  ) : (
-                    <HorizontaLDots className="size-6" />
-                  )}
-                </h2>
-                <ul className="flex flex-col gap-4">
-                  {projects
-                    .filter((p) => !p.is_completed)
-                    .map((project) => (
-                      <li key={project.id}>
-                        <Link
-                          to={`/project/${project.id}`}
-                          className={`menu-item group ${
-                            isActive(`/project/${project.id}`)
-                              ? "menu-item-active"
-                              : "menu-item-inactive"
-                          }`}
-                        >
-                          <span
-                            className={`menu-item-icon-size ${
+            {!user?.is_admin &&
+              projects.filter((p) => !p.is_completed).length > 0 && (
+                <div>
+                  <h2
+                    className={`mb-4 text-xs uppercase flex leading-[20px] text-gray-400 ${
+                      !isExpanded && !isHovered
+                        ? "lg:justify-center"
+                        : "justify-start"
+                    }`}
+                  >
+                    {isExpanded || isHovered || isMobileOpen ? (
+                      "Projects"
+                    ) : (
+                      <HorizontaLDots className="size-6" />
+                    )}
+                  </h2>
+                  <ul className="flex flex-col gap-4">
+                    {projects
+                      .filter((p) => !p.is_completed)
+                      .map((project) => (
+                        <li key={project.id}>
+                          <Link
+                            to={`/project/${project.id}`}
+                            className={`menu-item group ${
                               isActive(`/project/${project.id}`)
-                                ? "menu-item-icon-active"
-                                : "menu-item-icon-inactive"
+                                ? "menu-item-active"
+                                : "menu-item-inactive"
                             }`}
                           >
-                            <ProjectIcon />
-                          </span>
-                          {(isExpanded || isHovered || isMobileOpen) && (
-                            <span className="menu-item-text">{project.name}</span>
-                          )}
-                        </Link>
-                      </li>
-                    ))}
-                </ul>
-              </div>
-            )}
+                            <span
+                              className={`menu-item-icon-size ${
+                                isActive(`/project/${project.id}`)
+                                  ? "menu-item-icon-active"
+                                  : "menu-item-icon-inactive"
+                              }`}
+                            >
+                              <ProjectIcon />
+                            </span>
+                            {(isExpanded || isHovered || isMobileOpen) && (
+                              <span className="menu-item-text">
+                                {project.name}
+                              </span>
+                            )}
+                          </Link>
+                        </li>
+                      ))}
+                  </ul>
+                </div>
+              )}
           </div>
         </nav>
       </div>

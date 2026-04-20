@@ -1,16 +1,16 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "react-router";
-import PageBreadcrumb from "../components/common/PageBreadCrumb";
-import PageMeta from "../components/common/PageMeta";
-import Badge from "../components/ui/badge/Badge";
-import { AddIcon, CalenderIcon, HorizontaLDots } from "../icons";
-import Button from "../components/ui/button/Button";
-import { Modal } from "../components/ui/modal";
-import { useModal } from "../hooks/useModal";
-import Input from "../components/form/input/InputField";
-import Label from "../components/form/Label";
-import Select from "../components/form/Select";
-import DatePicker from "../components/form/date-picker";
+import PageBreadcrumb from "../../components/common/PageBreadCrumb";
+import PageMeta from "../../components/common/PageMeta";
+import Badge from "../../components/ui/badge/Badge";
+import { AddIcon, CalenderIcon, HorizontaLDots } from "../../icons";
+import Button from "../../components/ui/button/Button";
+import { Modal } from "../../components/ui/modal";
+import { useModal } from "../../hooks/useModal";
+import Input from "../../components/form/input/InputField";
+import Label from "../../components/form/Label";
+import Select from "../../components/form/Select";
+import DatePicker from "../../components/form/date-picker";
 import {
   tasksApi,
   projectsApi,
@@ -18,8 +18,8 @@ import {
   type TaskItem,
   type ProjectMemberItem,
   type UserItem,
-} from "../services/api";
-import { useAuth } from "../context/AuthContext";
+} from "../../services/api";
+import { useAuth } from "../../context/AuthContext";
 
 type TabKey = "todo" | "completed" | "team-members";
 
