@@ -1,19 +1,24 @@
-from flask import Blueprint, request, jsonify
-from flask_jwt_extended import jwt_required
-from sqlalchemy.exc import IntegrityError
+import secrets
+import string
 
-from app import db
+from flask import Blueprint, request, jsonify, current_app
+from flask_jwt_extended import jwt_required
+from flask_mail import Message
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import aliased
+
+from app import db, mail
 from app.models.user import User
 from app.models.project import Project
 from app.models.project_member import ProjectMember
-from app.schemas.user_schema import UserSchema, UserRegisterSchema, UserUpdateSchema, UserAdminUpdateSchema
+from app.schemas.user_schema import UserSchema, UserUpdateSchema, UserAdminUpdateSchema, UserAdminCreateSchema
 from app.utils.auth import current_user, admin_required, write_audit
 
 bp = Blueprint("users", __name__, url_prefix="/users")
 
 user_schema = UserSchema()
 users_schema = UserSchema(many=True)
-register_schema = UserRegisterSchema()
+admin_create_schema = UserAdminCreateSchema()
 update_schema = UserUpdateSchema()
 admin_update_schema = UserAdminUpdateSchema()
 
@@ -21,7 +26,10 @@ admin_update_schema = UserAdminUpdateSchema()
 @bp.post("")
 @admin_required
 def create_user():
-    data = register_schema.load(request.get_json(silent=True) or {})
+    data = admin_create_schema.load(request.get_json(silent=True) or {})
+
+    alphabet = string.ascii_letters + string.digits
+    temp_password = ''.join(secrets.choice(alphabet) for _ in range(12))
 
     user = User(
         first_name=data["first_name"],
@@ -29,7 +37,7 @@ def create_user():
         email=data["email"],
         is_admin=False,
     )
-    user.set_password(data["password"])
+    user.set_password(temp_password)
 
     try:
         db.session.add(user)
@@ -45,6 +53,20 @@ def create_user():
     except IntegrityError:
         db.session.rollback()
         return jsonify({"error": "email already registered"}), 409
+
+    msg = Message(
+        subject="Your Tally Account Has Been Created",
+        sender=current_app.config["MAIL_USERNAME"],
+        recipients=[user.email],
+        body=(
+            f"Hi {user.first_name},\n\n"
+            f"An administrator has created a Tally account for you.\n\n"
+            f"Your temporary password is: {temp_password}\n\n"
+            f"Please log in at {current_app.config['FRONTEND_URL']} and change your password immediately.\n\n"
+            f"Do not share this password with anyone."
+        ),
+    )
+    mail.send(msg)
 
     return jsonify(user_schema.dump(user)), 201
 
@@ -145,17 +167,29 @@ def delete_user(user_id):
         return jsonify({"error": "user not found"}), 404
 
     # Block deletion if user is the sole leader of any project
-    leader_memberships = ProjectMember.query.filter_by(user_id=user_id, role="leader").all()
-    sole_leader_of = []
-    for membership in leader_memberships:
-        other_leaders = ProjectMember.query.filter(
-            ProjectMember.project_id == membership.project_id,
-            ProjectMember.role == "leader",
-            ProjectMember.user_id != user_id,
-        ).count()
-        if other_leaders == 0:
-            project = Project.query.get(membership.project_id)
-            sole_leader_of.append(project.name if project else f"project #{membership.project_id}")
+    OtherLeader = aliased(ProjectMember, name="other_leader")
+    subq = (
+        db.session.query(OtherLeader.id)
+        .filter(
+            OtherLeader.project_id == ProjectMember.project_id,
+            OtherLeader.role == "leader",
+            OtherLeader.user_id != user_id,
+        )
+        .correlate(ProjectMember)
+        .exists()
+    )
+    sole_leader_of = [
+        name for (name,) in (
+            db.session.query(Project.name)
+            .join(ProjectMember, ProjectMember.project_id == Project.id)
+            .filter(
+                ProjectMember.user_id == user_id,
+                ProjectMember.role == "leader",
+                ~subq,
+            )
+            .all()
+        )
+    ]
 
     if sole_leader_of:
         return jsonify({

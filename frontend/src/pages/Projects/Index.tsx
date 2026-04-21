@@ -54,6 +54,7 @@ export default function Projects() {
   const { user: currentUser } = useAuth();
   const [projects, setProjects] = useState<ProjectItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
   const { isOpen, openModal, closeModal } = useModal();
 
   const [projectName, setProjectName] = useState("");
@@ -81,7 +82,8 @@ export default function Projects() {
 
   const fetchProjects = async () => {
     const result = await projectsApi.list();
-    if (result.data) setProjects(result.data);
+    if (result.error) setFetchError(result.error);
+    else if (result.data) setProjects(result.data);
     setLoading(false);
   };
 
@@ -242,6 +244,8 @@ export default function Projects() {
         <div className="flex items-center justify-center py-20">
           <LoadingIcon className="size-150 animate-spin text-brand-500" />
         </div>
+      ) : fetchError ? (
+        <div className="py-12 text-center text-sm text-red-500">{fetchError}</div>
       ) : (
         <DataTable<ProjectItem>
           data={projects}

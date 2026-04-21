@@ -1,5 +1,5 @@
 from functools import wraps
-from flask import jsonify, request
+from flask import jsonify, request, g
 from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
 
 from app import db
@@ -10,10 +10,15 @@ from app.models.audit_log import AuditLog
 
 
 def current_user() -> User | None:
+    if 'current_user' in g:
+        return g.current_user
     uid = get_jwt_identity()
     if uid is None:
+        g.current_user = None
         return None
-    return User.query.get(int(uid))
+    user = User.query.get(int(uid))
+    g.current_user = user
+    return user
 
 
 def admin_required(fn):
@@ -57,8 +62,12 @@ def write_audit(action: str, resource_type: str, resource_id: int | None, change
     resolved_id = actor_id if actor_id is not None else (int(uid) if uid is not None else None)
     actor_email = None
     if resolved_id:
-        actor = User.query.get(resolved_id)
-        actor_email = actor.email if actor else None
+        cached = getattr(g, 'current_user', None)
+        if cached and cached.id == resolved_id:
+            actor_email = cached.email
+        else:
+            actor = User.query.get(resolved_id)
+            actor_email = actor.email if actor else None
     log = AuditLog(
         user_id=resolved_id,
         user_email=actor_email,

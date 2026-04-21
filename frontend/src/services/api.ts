@@ -57,10 +57,10 @@ export const usersApi = {
   list: () => request<UserItem[]>("/users"),
   search: (query: string) => request<UserItem[]>(`/users?search=${encodeURIComponent(query)}`),
   getPersonalProject: () => request<{ id: number; name: string }>("/users/me/personal-project"),
-  adminCreate: (first_name: string, last_name: string, email: string, password: string) =>
+  adminCreate: (first_name: string, last_name: string, email: string) =>
     request<UserItem>("/users", {
       method: "POST",
-      body: JSON.stringify({ first_name, last_name, email, password }),
+      body: JSON.stringify({ first_name, last_name, email }),
     }),
   update: (user_id: number, data: { first_name?: string; last_name?: string; email?: string; password?: string }) =>
     request<UserItem>(`/users/${user_id}`, {

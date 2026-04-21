@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "react-router";
 import PageBreadcrumb from "../../components/common/PageBreadCrumb";
 import PageMeta from "../../components/common/PageMeta";
@@ -52,7 +52,7 @@ interface TaskRowProps {
   onDelete: (task: TaskItem) => void;
 }
 
-const TaskRow: React.FC<TaskRowProps> = ({ task, canEdit, onEdit, onToggle, onDelete }) => {
+const TaskRow = memo(function TaskRow({ task, canEdit, onEdit, onToggle, onDelete }: TaskRowProps) {
   const completed = task.status === "completed";
   return (
     <div className="flex flex-wrap items-center gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3 transition hover:border-gray-300 dark:border-gray-800 dark:bg-white/[0.03] dark:hover:border-gray-700">
@@ -156,7 +156,7 @@ const TaskRow: React.FC<TaskRowProps> = ({ task, canEdit, onEdit, onToggle, onDe
       </div>
     </div>
   );
-};
+});
 
 interface TaskSectionProps {
   title: string;
@@ -169,7 +169,7 @@ interface TaskSectionProps {
   onDelete: (task: TaskItem) => void;
 }
 
-const TaskSection: React.FC<TaskSectionProps> = ({
+const TaskSection = memo(function TaskSection({
   title,
   count,
   countColor,
@@ -178,7 +178,7 @@ const TaskSection: React.FC<TaskSectionProps> = ({
   onEdit,
   onToggle,
   onDelete,
-}) => {
+}: TaskSectionProps) {
   if (tasks.length === 0) return null;
 
   return (
@@ -207,7 +207,7 @@ const TaskSection: React.FC<TaskSectionProps> = ({
       </div>
     </div>
   );
-};
+});
 
 export default function ProjectDetail() {
   const { id } = useParams<{ id: string }>();
@@ -216,6 +216,7 @@ export default function ProjectDetail() {
   const { user: currentUser } = useAuth();
 
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
   const [tasks, setTasks] = useState<TaskItem[]>([]);
   const [members, setMembers] = useState<ProjectMemberItem[]>([]);
   const [activeTab, setActiveTab] = useState<TabKey>("todo");
@@ -282,8 +283,12 @@ export default function ProjectDetail() {
       tasksApi.list(projectId),
       projectsApi.getMembers(projectId),
     ]).then(([tasksResult, membersResult]) => {
-      if (tasksResult.data) setTasks(tasksResult.data);
-      if (membersResult.data) setMembers(membersResult.data);
+      if (tasksResult.error || membersResult.error) {
+        setFetchError(tasksResult.error || membersResult.error || "Failed to load");
+      } else {
+        if (tasksResult.data) setTasks(tasksResult.data);
+        if (membersResult.data) setMembers(membersResult.data);
+      }
       setLoading(false);
     });
   }, [projectId]);
@@ -426,7 +431,7 @@ export default function ProjectDetail() {
     fetchTasks();
   };
 
-  const openEditTask = (task: TaskItem) => {
+  const openEditTask = useCallback((task: TaskItem) => {
     setEditingTask(task);
     setEditTaskName(task.name);
     setEditTaskPriority(task.priority);
@@ -434,7 +439,7 @@ export default function ProjectDetail() {
     setEditTaskAssignees(task.assignees.map((a) => ({ user_id: a.user_id, user_email: a.user_email })));
     setEditTaskMemberSearch("");
     setEditTaskError(null);
-  };
+  }, []);
 
   const closeEditTask = () => {
     setEditingTask(null);
@@ -505,18 +510,18 @@ export default function ProjectDetail() {
     closeDeleteMember();
   };
 
-  const toggleTask = async (task: TaskItem) => {
+  const toggleTask = useCallback(async (task: TaskItem) => {
     const newStatus = task.status === "completed" ? "todo" : "completed";
     setTasks((prev) =>
       prev.map((t) => (t.id === task.id ? { ...t, status: newStatus } : t)),
     );
     await tasksApi.update(task.id, { status: newStatus });
-  };
+  }, []);
 
-  const handleDeleteTask = async (task: TaskItem) => {
+  const handleDeleteTask = useCallback(async (task: TaskItem) => {
     setTasks((prev) => prev.filter((t) => t.id !== task.id));
     await tasksApi.delete(task.id);
-  };
+  }, []);
 
   const counts = useMemo(
     () => ({
@@ -557,6 +562,8 @@ export default function ProjectDetail() {
         <div className="flex items-center justify-center py-20">
           <LoadingIcon className="size-150 animate-spin text-brand-500" />
         </div>
+      ) : fetchError ? (
+        <div className="py-12 text-center text-sm text-red-500">{fetchError}</div>
       ) : (
         <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] xl:p-6">
           <div className="flex flex-wrap items-center justify-between gap-4">

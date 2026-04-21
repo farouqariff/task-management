@@ -57,10 +57,12 @@ const searchLog = (row: AuditLogItem) =>
 export default function Log() {
   const [logs, setLogs] = useState<AuditLogItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
 
   useEffect(() => {
     auditApi.list().then((result) => {
-      if (result.data) setLogs(result.data.items);
+      if (result.error) setFetchError(result.error);
+      else if (result.data) setLogs(result.data.items);
       setLoading(false);
     });
   }, []);
@@ -76,6 +78,8 @@ export default function Log() {
         <div className="flex items-center justify-center py-20">
           <LoadingIcon className="size-150 animate-spin text-brand-500" />
         </div>
+      ) : fetchError ? (
+        <div className="py-12 text-center text-sm text-red-500">{fetchError}</div>
       ) : (
         <DataTable<AuditLogItem>
           data={logs}

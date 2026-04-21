@@ -22,6 +22,7 @@ def list_notifications():
         Notification.query
         .filter_by(user_id=me_.id)
         .order_by(Notification.created_at.desc())
+        .limit(50)
         .all()
     )
     return jsonify(notifications_schema.dump(items)), 200

@@ -66,3 +66,14 @@ class UserAdminUpdateSchema(ma.Schema):
     @pre_load
     def normalize(self, data, **kwargs):
         return _normalize(data)
+
+
+class UserAdminCreateSchema(ma.Schema):
+    """Used when admin creates a user — no password, backend generates one."""
+    first_name = fields.String(required=True, validate=validate.Length(min=1, max=80))
+    last_name = fields.String(required=True, validate=validate.Length(min=1, max=80))
+    email = fields.Email(required=True)
+
+    @pre_load
+    def normalize(self, data, **kwargs):
+        return _normalize(data)

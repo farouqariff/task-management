@@ -1,5 +1,6 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required
+from sqlalchemy.orm import joinedload, selectinload
 
 from app import db
 from app.models.project import Project
@@ -33,11 +34,23 @@ def list_projects():
     if not me_:
         return jsonify({"error": "user not found"}), 404
 
+    _eager = [
+        joinedload(Project.creator),
+        selectinload(Project.members).joinedload(ProjectMember.user),
+    ]
+
     if me_.is_admin:
-        projects = Project.query.filter_by(is_personal=False).order_by(Project.id.desc()).all()
+        projects = (
+            Project.query
+            .options(*_eager)
+            .filter_by(is_personal=False)
+            .order_by(Project.id.desc())
+            .all()
+        )
     else:
         projects = (
             Project.query
+            .options(*_eager)
             .outerjoin(ProjectMember, ProjectMember.project_id == Project.id)
             .filter(Project.is_personal == False)
             .filter((Project.created_by == me_.id) | (ProjectMember.user_id == me_.id))

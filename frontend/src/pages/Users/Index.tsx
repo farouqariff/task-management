@@ -39,6 +39,14 @@ export default function Users() {
   const [loading, setLoading] = useState(true);
   const { isOpen, openModal, closeModal } = useModal();
 
+  const [fetchError, setFetchError] = useState<string | null>(null);
+
+  const [addFirstName, setAddFirstName] = useState("");
+  const [addLastName, setAddLastName] = useState("");
+  const [addEmail, setAddEmail] = useState("");
+  const [addError, setAddError] = useState("");
+  const [addSaving, setAddSaving] = useState(false);
+
   const [editingUser, setEditingUser] = useState<UserItem | null>(null);
   const [editFirstName, setEditFirstName] = useState("");
   const [editLastName, setEditLastName] = useState("");
@@ -52,13 +60,31 @@ export default function Users() {
 
   useEffect(() => {
     usersApi.list().then((result) => {
-      if (result.data) setUsers(result.data);
+      if (result.error) setFetchError(result.error);
+      else if (result.data) setUsers(result.data);
       setLoading(false);
     });
   }, []);
 
-  const handleSave = () => {
+  const closeAddModal = () => {
     closeModal();
+    setAddFirstName("");
+    setAddLastName("");
+    setAddEmail("");
+    setAddError("");
+  };
+
+  const handleSave = async () => {
+    setAddError("");
+    if (!addFirstName.trim()) { setAddError("Please enter first name"); return; }
+    if (!addLastName.trim()) { setAddError("Please enter last name"); return; }
+    if (!addEmail.trim()) { setAddError("Please enter email"); return; }
+    setAddSaving(true);
+    const result = await usersApi.adminCreate(addFirstName, addLastName, addEmail);
+    setAddSaving(false);
+    if (result.error) { setAddError(result.error); return; }
+    if (result.data) setUsers((prev) => [...prev, result.data!]);
+    closeAddModal();
   };
 
   const openEditModal = (row: UserItem) => {
@@ -134,6 +160,8 @@ export default function Users() {
         <div className="flex items-center justify-center py-20">
           <LoadingIcon className="size-150 animate-spin text-brand-500" />
         </div>
+      ) : fetchError ? (
+        <div className="py-12 text-center text-sm text-red-500">{fetchError}</div>
       ) : (
         <DataTable<UserItem>
           data={users}
@@ -147,32 +175,53 @@ export default function Users() {
         />
       )}
 
-      <Modal isOpen={isOpen} onClose={closeModal} className="max-w-[584px] m-4">
+      <Modal isOpen={isOpen} onClose={closeAddModal} className="max-w-[584px] m-4">
         <div className="relative w-full rounded-3xl bg-white p-6 dark:bg-gray-900">
           <h4 className="mb-6 text-lg font-semibold text-gray-800 dark:text-white/90">
             New User
           </h4>
-          <form className="flex flex-col">
+          <form className="flex flex-col" onSubmit={(e) => e.preventDefault()}>
             <div className="grid grid-cols-1 gap-x-5 gap-y-5 sm:grid-cols-2">
               <div>
                 <Label>First Name</Label>
-                <Input type="text" placeholder="Musharof" />
+                <Input
+                  type="text"
+                  placeholder="Musharof"
+                  value={addFirstName}
+                  onChange={(e) => setAddFirstName(e.target.value)}
+                />
               </div>
               <div>
                 <Label>Last Name</Label>
-                <Input type="text" placeholder="Chowdhury" />
+                <Input
+                  type="text"
+                  placeholder="Chowdhury"
+                  value={addLastName}
+                  onChange={(e) => setAddLastName(e.target.value)}
+                />
               </div>
               <div className="sm:col-span-2">
                 <Label>Email Address</Label>
-                <Input type="text" placeholder="randomuser@pimjo.com" />
+                <Input
+                  type="text"
+                  placeholder="randomuser@pimjo.com"
+                  value={addEmail}
+                  onChange={(e) => setAddEmail(e.target.value)}
+                />
               </div>
             </div>
+            {addError && (
+              <p className="mt-3 text-sm text-red-500">{addError}</p>
+            )}
+            <p className="mt-3 text-xs text-gray-400 dark:text-gray-500">
+              A temporary password will be generated and sent to the user's email.
+            </p>
             <div className="mt-6 flex items-center justify-end gap-3">
-              <Button size="sm" variant="outline" onClick={closeModal}>
+              <Button size="sm" variant="outline" onClick={closeAddModal}>
                 Close
               </Button>
-              <Button size="sm" onClick={handleSave}>
-                Add
+              <Button size="sm" onClick={handleSave} disabled={addSaving}>
+                {addSaving ? "Adding..." : "Add"}
               </Button>
             </div>
           </form>

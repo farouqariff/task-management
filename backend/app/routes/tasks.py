@@ -1,5 +1,6 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required
+from sqlalchemy.orm import joinedload, selectinload
 
 from app import db
 from app.models.task import Task
@@ -40,14 +41,21 @@ def list_tasks():
 
     project_id = request.args.get("project_id", type=int)
 
+    _eager = [
+        joinedload(Task.creator),
+        joinedload(Task.project),
+        selectinload(Task.assignees).joinedload(TaskAssignee.user),
+    ]
+
     if me_.is_admin:
-        query = Task.query
+        query = Task.query.options(*_eager)
         if project_id:
             query = query.filter(Task.project_id == project_id)
         tasks = query.order_by(Task.id.desc()).all()
     else:
         query = (
             Task.query
+            .options(*_eager)
             .outerjoin(ProjectMember, ProjectMember.project_id == Task.project_id)
             .outerjoin(TaskAssignee, TaskAssignee.task_id == Task.id)
             .filter(

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import PageBreadcrumb from "../components/common/PageBreadCrumb";
 import PageMeta from "../components/common/PageMeta";
 import Badge from "../components/ui/badge/Badge";
@@ -39,7 +39,7 @@ interface TaskRowProps {
   onDelete: (task: TaskItem) => void;
 }
 
-const TaskRow: React.FC<TaskRowProps> = ({ task, onEdit, onToggle, onDelete }) => {
+const TaskRow = memo(function TaskRow({ task, onEdit, onToggle, onDelete }: TaskRowProps) {
   const completed = task.status === "completed";
   return (
     <div className="flex flex-wrap items-center gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3 transition hover:border-gray-300 dark:border-gray-800 dark:bg-white/[0.03] dark:hover:border-gray-700">
@@ -128,7 +128,7 @@ const TaskRow: React.FC<TaskRowProps> = ({ task, onEdit, onToggle, onDelete }) =
       </div>
     </div>
   );
-};
+});
 
 interface TaskSectionProps {
   title: string;
@@ -140,7 +140,7 @@ interface TaskSectionProps {
   onDelete: (task: TaskItem) => void;
 }
 
-const TaskSection: React.FC<TaskSectionProps> = ({
+const TaskSection = memo(function TaskSection({
   title,
   count,
   countColor,
@@ -148,7 +148,7 @@ const TaskSection: React.FC<TaskSectionProps> = ({
   onEdit,
   onToggle,
   onDelete,
-}) => {
+}: TaskSectionProps) {
   if (tasks.length === 0) return null;
 
   return (
@@ -174,7 +174,7 @@ const TaskSection: React.FC<TaskSectionProps> = ({
       </div>
     </div>
   );
-};
+});
 
 export default function MyTasks() {
   const [loading, setLoading] = useState(true);
@@ -197,11 +197,6 @@ export default function MyTasks() {
   const [editTaskDueDate, setEditTaskDueDate] = useState("");
   const [editTaskError, setEditTaskError] = useState<string | null>(null);
   const [editTaskSaving, setEditTaskSaving] = useState(false);
-
-  const fetchTasks = async (projectId: number) => {
-    const result = await tasksApi.list(projectId);
-    if (result.data) setTasks(result.data);
-  };
 
   useEffect(() => {
     async function load() {
@@ -248,16 +243,16 @@ export default function MyTasks() {
     }
     setSaving(false);
     handleModalClose();
-    fetchTasks(personalProjectId);
+    if (result.data) setTasks((prev) => [result.data!, ...prev]);
   };
 
-  const openEditTask = (task: TaskItem) => {
+  const openEditTask = useCallback((task: TaskItem) => {
     setEditingTask(task);
     setEditTaskName(task.name);
     setEditTaskPriority(task.priority);
     setEditTaskDueDate(task.due_date ? task.due_date.split("T")[0] : "");
     setEditTaskError(null);
-  };
+  }, []);
 
   const closeEditTask = () => {
     setEditingTask(null);
@@ -284,21 +279,21 @@ export default function MyTasks() {
     }
     setEditTaskSaving(false);
     closeEditTask();
-    fetchTasks(personalProjectId);
+    if (result.data) setTasks((prev) => prev.map((t) => (t.id === editingTask.id ? result.data! : t)));
   };
 
-  const toggleTask = async (task: TaskItem) => {
+  const toggleTask = useCallback(async (task: TaskItem) => {
     const newStatus = task.status === "completed" ? "todo" : "completed";
     setTasks((prev) =>
       prev.map((t) => (t.id === task.id ? { ...t, status: newStatus } : t)),
     );
     await tasksApi.update(task.id, { status: newStatus });
-  };
+  }, []);
 
-  const handleDeleteTask = async (task: TaskItem) => {
+  const handleDeleteTask = useCallback(async (task: TaskItem) => {
     setTasks((prev) => prev.filter((t) => t.id !== task.id));
     await tasksApi.delete(task.id);
-  };
+  }, []);
 
   const counts = useMemo(
     () => ({
