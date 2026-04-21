@@ -328,7 +328,7 @@ export default function MyTasks() {
   return (
     <>
       <PageMeta
-        title="My Tasks | Tally Task Management"
+        title="My Tasks | Tally"
         description="My tasks page"
       />
       <PageBreadcrumb pageTitle="My Tasks" />

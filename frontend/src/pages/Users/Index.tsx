@@ -76,8 +76,11 @@ export default function Users() {
 
   const handleEditSave = async () => {
     if (!editingUser) return;
-    setEditSaving(true);
     setEditError("");
+    if (!editFirstName.trim()) { setEditError("Please enter first name"); return; }
+    if (!editLastName.trim()) { setEditError("Please enter last name"); return; }
+    if (!editEmail.trim()) { setEditError("Please enter email"); return; }
+    setEditSaving(true);
     const result = await usersApi.update(editingUser.id, {
       first_name: editFirstName,
       last_name: editLastName,
@@ -123,7 +126,7 @@ export default function Users() {
   return (
     <>
       <PageMeta
-        title="Users | Tally Task Management"
+        title="Users | Tally"
         description="Users directory — search, sort, and manage team members."
       />
       <PageBreadcrumb pageTitle="Users" />

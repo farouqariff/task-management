@@ -3,6 +3,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_marshmallow import Marshmallow
 from flask_jwt_extended import JWTManager
 from flask_cors import CORS
+from flask_mail import Mail
 from marshmallow import ValidationError
 
 from app.config import Config
@@ -10,6 +11,7 @@ from app.config import Config
 db = SQLAlchemy()
 ma = Marshmallow()
 jwt = JWTManager()
+mail = Mail()
 
 
 def create_app(config_class=Config):
@@ -19,6 +21,7 @@ def create_app(config_class=Config):
     db.init_app(app)
     ma.init_app(app)
     jwt.init_app(app)
+    mail.init_app(app)
     CORS(app)
 
     from app import models  # noqa: F401 — register models with SQLAlchemy
@@ -40,7 +43,11 @@ def create_app(config_class=Config):
     @app.errorhandler(ValidationError)
     def _on_validation_error(err):
         db.session.rollback()
-        return jsonify(err.messages), 400
+        messages = []
+        for field, errors in err.messages.items():
+            for msg in errors:
+                messages.append(f"{field}: {msg}")
+        return jsonify({"error": "; ".join(messages)}), 400
 
     with app.app_context():
         db.create_all()

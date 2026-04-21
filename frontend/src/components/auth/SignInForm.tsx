@@ -17,13 +17,28 @@ export default function SignInForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [isChecked, setIsChecked] = useState(false);
   const [error, setError] = useState("");
+  const [emailError, setEmailError] = useState("");
+  const [passwordError, setPasswordError] = useState("");
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
-    setLoading(true);
+    setEmailError("");
+    setPasswordError("");
 
+    let hasError = false;
+    if (!email) {
+      setEmailError("Please enter email");
+      hasError = true;
+    }
+    if (!password) {
+      setPasswordError("Please enter password");
+      hasError = true;
+    }
+    if (hasError) return;
+
+    setLoading(true);
     const result = await authApi.login(email, password);
     setLoading(false);
 
@@ -32,7 +47,7 @@ export default function SignInForm() {
       return;
     }
 
-    login(result.data.access_token, result.data.user);
+    login(result.data.access_token, result.data.user, isChecked);
     navigate("/", { replace: true });
   };
 
@@ -58,6 +73,7 @@ export default function SignInForm() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                   />
+                  {emailError && <p className="mt-1 text-sm text-error-500">{emailError}</p>}
                 </div>
                 <div>
                   <Label>
@@ -81,6 +97,7 @@ export default function SignInForm() {
                       )}
                     </span>
                   </div>
+                  {passwordError && <p className="mt-1 text-sm text-error-500">{passwordError}</p>}
                 </div>
 
                 {error && (

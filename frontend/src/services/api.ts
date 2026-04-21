@@ -17,10 +17,13 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<ApiR
     const res = await fetch(`${BASE_URL}${path}`, { ...options, headers });
     const json = await res.json().catch(() => ({}));
     if (res.status === 401) {
-      localStorage.removeItem("token");
-      localStorage.removeItem("user");
-      window.location.href = "/signin";
-      return { error: "Session expired" };
+      if (token) {
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+        window.location.href = "/signin";
+        return { error: "Session expired" };
+      }
+      return { error: (json as { error?: string }).error ?? "Invalid credentials" };
     }
     if (!res.ok) {
       return { error: (json as { error?: string; msg?: string }).error ?? (json as { msg?: string }).msg ?? "Something went wrong" };
@@ -206,5 +209,17 @@ export const authApi = {
     request<RegisterResponse>("/auth/register", {
       method: "POST",
       body: JSON.stringify({ first_name, last_name, email, password }),
+    }),
+
+  forgotPassword: (email: string) =>
+    request<{ msg: string }>("/auth/forgot-password", {
+      method: "POST",
+      body: JSON.stringify({ email }),
+    }),
+
+  resetPassword: (token: string, password: string) =>
+    request<{ msg: string }>("/auth/reset-password", {
+      method: "POST",
+      body: JSON.stringify({ token, password }),
     }),
 };

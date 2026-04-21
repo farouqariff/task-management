@@ -27,6 +27,9 @@ services:
       ADMIN_PASSWORD: "abcd1234*"
       ADMIN_FIRST_NAME: Admin
       ADMIN_LAST_NAME: Tally
+      MAIL_USERNAME: ${MAIL_USERNAME}
+      MAIL_PASSWORD: ${MAIL_PASSWORD}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost}
     depends_on:
       db:
         condition: service_healthy

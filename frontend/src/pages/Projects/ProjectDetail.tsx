@@ -548,7 +548,7 @@ export default function ProjectDetail() {
   return (
     <>
       <PageMeta
-        title="Project | Tally Task Management"
+        title="Project | Tally"
         description="Project detail page"
       />
       <PageBreadcrumb pageTitle="Project Tasks" />

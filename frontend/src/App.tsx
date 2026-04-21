@@ -105,7 +105,7 @@ export default function App() {
             }
           />
           <Route path="/reset-password" element={<ResetPassword />} />
-          <Route path="/new-password" element={<NewPassword />} />
+          <Route path="/new-password/:token" element={<NewPassword />} />
 
           {/* Fallback */}
           <Route path="/error-401" element={<Unauthorized />} />

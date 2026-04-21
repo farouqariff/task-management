@@ -161,8 +161,12 @@ export default function Projects() {
 
   const handleEditSave = async () => {
     if (!editingProject) return;
-    setEditSaving(true);
     setEditError("");
+    if (!editName.trim()) {
+      setEditError("Please enter a project name.");
+      return;
+    }
+    setEditSaving(true);
     const result = await projectsApi.update(editingProject.id, {
       name: editName,
       is_completed: editIsCompleted,
@@ -207,6 +211,10 @@ export default function Projects() {
 
   const handleCreateProject = async () => {
     setProjectError(null);
+    if (!projectName.trim()) {
+      setProjectError("Please enter a project name.");
+      return;
+    }
     if (!leaderId) {
       setProjectError("Please select a leader.");
       return;
@@ -226,7 +234,7 @@ export default function Projects() {
   return (
     <>
       <PageMeta
-        title="Projects | Tally Task Management"
+        title="Projects | Tally"
         description="Projects directory — search, sort, and manage projects."
       />
       <PageBreadcrumb pageTitle="Projects" />

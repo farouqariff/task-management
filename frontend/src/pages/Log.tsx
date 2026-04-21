@@ -68,7 +68,7 @@ export default function Log() {
   return (
     <>
       <PageMeta
-        title="Audit Logs | Tally Task Management"
+        title="Audit Logs | Tally"
         description="Audit log — track all actions performed in the system."
       />
       <PageBreadcrumb pageTitle="Audit Logs" />

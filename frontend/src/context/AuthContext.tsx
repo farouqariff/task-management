@@ -13,7 +13,7 @@ export interface AuthUser {
 interface AuthContextType {
   token: string | null;
   user: AuthUser | null;
-  login: (token: string, user: AuthUser) => void;
+  login: (token: string, user: AuthUser, keepLoggedIn: boolean) => void;
   logout: () => void;
   isAuthenticated: boolean;
 }
@@ -21,17 +21,36 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [token, setToken] = useState<string | null>(() =>
-    localStorage.getItem("token")
-  );
-  const [user, setUser] = useState<AuthUser | null>(() => {
-    const stored = localStorage.getItem("user");
-    return stored ? (JSON.parse(stored) as AuthUser) : null;
+  const [token, setToken] = useState<string | null>(() => {
+    const stored = localStorage.getItem("token");
+    if (
+      stored &&
+      localStorage.getItem("session_only") === "true" &&
+      !sessionStorage.getItem("session_active")
+    ) {
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      localStorage.removeItem("session_only");
+      return null;
+    }
+    return stored;
   });
 
-  const login = (newToken: string, newUser: AuthUser) => {
+  const [user, setUser] = useState<AuthUser | null>(() => {
+    const stored = localStorage.getItem("user");
+    if (!stored || !localStorage.getItem("token")) return null;
+    return JSON.parse(stored) as AuthUser;
+  });
+
+  const login = (newToken: string, newUser: AuthUser, keepLoggedIn: boolean) => {
     localStorage.setItem("token", newToken);
     localStorage.setItem("user", JSON.stringify(newUser));
+    if (keepLoggedIn) {
+      localStorage.removeItem("session_only");
+    } else {
+      localStorage.setItem("session_only", "true");
+    }
+    sessionStorage.setItem("session_active", "true");
     setToken(newToken);
     setUser(newUser);
   };
@@ -39,6 +58,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
+    localStorage.removeItem("session_only");
+    sessionStorage.removeItem("session_active");
     setToken(null);
     setUser(null);
   };

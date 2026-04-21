@@ -15,11 +15,26 @@ export default function SignUpForm() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
+  const [firstNameError, setFirstNameError] = useState("");
+  const [lastNameError, setLastNameError] = useState("");
+  const [emailError, setEmailError] = useState("");
+  const [passwordError, setPasswordError] = useState("");
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    setFirstNameError("");
+    setLastNameError("");
+    setEmailError("");
+    setPasswordError("");
+
+    let hasError = false;
+    if (!firstName.trim()) { setFirstNameError("Please enter first name"); hasError = true; }
+    if (!lastName.trim()) { setLastNameError("Please enter last name"); hasError = true; }
+    if (!email.trim()) { setEmailError("Please enter email"); hasError = true; }
+    if (!password) { setPasswordError("Please enter password"); hasError = true; }
+    if (hasError) return;
 
     if (password !== confirmPassword) {
       setError("Passwords do not match");
@@ -61,6 +76,7 @@ export default function SignUpForm() {
                       value={firstName}
                       onChange={(e) => setFirstName(e.target.value)}
                     />
+                    {firstNameError && <p className="mt-1 text-sm text-error-500">{firstNameError}</p>}
                   </div>
                   <div className="sm:col-span-1">
                     <Label>
@@ -72,6 +88,7 @@ export default function SignUpForm() {
                       value={lastName}
                       onChange={(e) => setLastName(e.target.value)}
                     />
+                    {lastNameError && <p className="mt-1 text-sm text-error-500">{lastNameError}</p>}
                   </div>
                 </div>
                 <div>
@@ -84,6 +101,7 @@ export default function SignUpForm() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                   />
+                  {emailError && <p className="mt-1 text-sm text-error-500">{emailError}</p>}
                 </div>
                 <div>
                   <Label>
@@ -107,6 +125,7 @@ export default function SignUpForm() {
                       )}
                     </span>
                   </div>
+                  {passwordError && <p className="mt-1 text-sm text-error-500">{passwordError}</p>}
                 </div>
                 <div>
                   <Label>
