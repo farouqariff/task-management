@@ -75,7 +75,7 @@ export default function Profile() {
         last_name: result.data.last_name,
         full_name: result.data.full_name,
         email: result.data.email,
-      });
+      }, true);
     }
     setNewPassword("");
     setConfirmPassword("");
