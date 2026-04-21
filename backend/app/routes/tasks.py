@@ -5,6 +5,7 @@ from sqlalchemy.orm import joinedload, selectinload
 from app import db
 from app.models.task import Task
 from app.models.task_assignee import TaskAssignee
+from app.models.notification import Notification
 from app.models.project import Project
 from app.models.project_member import ProjectMember
 from app.models.user import User
@@ -120,9 +121,18 @@ def update_task(task_id):
         return jsonify({"error": "task not found"}), 404
 
     payload = request.get_json(silent=True) or {}
+    prev_status = task.status
 
     if can_manage_task(me_, task):
         task_schema.load(payload, instance=task, partial=True)
+        if prev_status != "completed" and task.status == "completed" and task.created_by and task.created_by != me_.id:
+            db.session.add(Notification(
+                user_id=task.created_by,
+                type="task",
+                title="Your task was marked complete",
+                message=f'"{task.name}" has been marked as complete',
+                link=f"/project/{task.project_id}",
+            ))
         write_audit("update", "task", task.id, payload, resource_label=task.name)
         db.session.commit()
         return jsonify(task_schema.dump(task)), 200
@@ -136,6 +146,14 @@ def update_task(task_id):
     for key, value in data.items():
         setattr(task, key, value)
 
+    if prev_status != "completed" and task.status == "completed" and task.created_by and task.created_by != me_.id:
+        db.session.add(Notification(
+            user_id=task.created_by,
+            type="task",
+            title="Your task was marked complete",
+            message=f'"{task.name}" has been marked as complete',
+            link=f"/project/{task.project_id}",
+        ))
     write_audit("update", "task", task.id, data, resource_label=task.name)
     db.session.commit()
     return jsonify(task_schema.dump(task)), 200
@@ -194,6 +212,14 @@ def add_assignee(task_id):
 
     assignee = TaskAssignee(task_id=task_id, user_id=user_id)
     db.session.add(assignee)
+    if user_id != me_.id:
+        db.session.add(Notification(
+            user_id=user_id,
+            type="task",
+            title="You've been assigned to a task",
+            message=f'You have been assigned to "{task.name}" in "{task.project.name}"',
+            link=f"/project/{task.project_id}",
+        ))
     write_audit("add_assignee", "task", task_id, {"user_id": user_id}, resource_label=task.name)
     db.session.commit()
     return jsonify(assignee_schema.dump(assignee)), 201
@@ -213,6 +239,13 @@ def remove_assignee(task_id, user_id):
     if not assignee:
         return jsonify({"error": "assignee not found"}), 404
 
+    if user_id != me_.id:
+        db.session.add(Notification(
+            user_id=user_id,
+            type="task",
+            title="You've been unassigned from a task",
+            message=f'You have been removed from "{task.name}" in "{task.project.name}"',
+        ))
     db.session.delete(assignee)
     write_audit("remove_assignee", "task", task_id, {"user_id": user_id}, resource_label=task.name)
     db.session.commit()

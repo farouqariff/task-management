@@ -5,6 +5,7 @@ from sqlalchemy.orm import joinedload, selectinload
 from app import db
 from app.models.project import Project
 from app.models.project_member import ProjectMember
+from app.models.notification import Notification
 from app.models.user import User
 from app.schemas.project_schema import (
     ProjectSchema,
@@ -83,6 +84,13 @@ def create_project():
     db.session.add(project)
     db.session.flush()
     db.session.add(ProjectMember(project_id=project.id, user_id=leader_id, role="leader"))
+    db.session.add(Notification(
+        user_id=leader_id,
+        type="project",
+        title="You've been assigned as project leader",
+        message=f'You are now the leader of "{project.name}"',
+        link=f"/project/{project.id}",
+    ))
 
     write_audit("create", "project", project.id, {"name": project.name, "leader_id": leader_id}, resource_label=project.name)
     db.session.commit()
@@ -122,13 +130,30 @@ def update_project(project_id):
         ).first()
         if not new_leader_member:
             return jsonify({"error": "new leader must already be a project member"}), 400
-        # Demote all current leaders then promote the new one
         for m in ProjectMember.query.filter_by(project_id=project_id, role="leader").all():
             m.role = "member"
         new_leader_member.role = "leader"
+        db.session.add(Notification(
+            user_id=leader_id,
+            type="project",
+            title="You're now the project leader",
+            message=f'You are now the leader of "{project.name}"',
+            link=f"/project/{project.id}",
+        ))
 
+    was_completed = project.is_completed
     if payload:
         project_schema.load(payload, instance=project, partial=True)
+
+    if not was_completed and project.is_completed:
+        for lid in project.leader_ids():
+            db.session.add(Notification(
+                user_id=lid,
+                type="project",
+                title="Project marked as complete",
+                message=f'"{project.name}" has been marked complete',
+                link=f"/project/{project.id}",
+            ))
 
     write_audit("update", "project", project.id, {**payload, **({"leader_id": leader_id} if leader_id else {})}, resource_label=project.name)
     db.session.commit()
@@ -189,6 +214,13 @@ def add_member(project_id):
 
     member = ProjectMember(project_id=project_id, user_id=data["user_id"], role=data["role"])
     db.session.add(member)
+    db.session.add(Notification(
+        user_id=data["user_id"],
+        type="project",
+        title="You've been added to a project",
+        message=f'You are now a member of "{project.name}"',
+        link=f"/project/{project.id}",
+    ))
     write_audit("add_member", "project", project_id, data, resource_label=project.name)
     db.session.commit()
     return jsonify(member_schema.dump(member)), 201
@@ -208,6 +240,12 @@ def remove_member(project_id, user_id):
     if not member:
         return jsonify({"error": "member not found"}), 404
 
+    db.session.add(Notification(
+        user_id=user_id,
+        type="project",
+        title="You've been removed from a project",
+        message=f'You have been removed from "{project.name}"',
+    ))
     db.session.delete(member)
     write_audit("remove_member", "project", project_id, {"user_id": user_id}, resource_label=project.name)
     db.session.commit()
