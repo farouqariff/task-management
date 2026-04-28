@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
-import PageBreadcrumb from "../../components/common/PageBreadCrumb";
 import PageMeta from "../../components/common/PageMeta";
 import DataTable, { Column } from "../../components/tables/DataTable/DataTable";
 import {
@@ -65,7 +64,9 @@ export default function Projects() {
   const [projectError, setProjectError] = useState<string | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const [editingProject, setEditingProject] = useState<ProjectItem | null>(null);
+  const [editingProject, setEditingProject] = useState<ProjectItem | null>(
+    null,
+  );
   const [editName, setEditName] = useState("");
   const [editIsCompleted, setEditIsCompleted] = useState(false);
   const [editLeaderId, setEditLeaderId] = useState<number | null>(null);
@@ -76,7 +77,9 @@ export default function Projects() {
   const [editSaving, setEditSaving] = useState(false);
   const editDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const [deletingProject, setDeletingProject] = useState<ProjectItem | null>(null);
+  const [deletingProject, setDeletingProject] = useState<ProjectItem | null>(
+    null,
+  );
   const [deleteError, setDeleteError] = useState("");
   const [deleteLoading, setDeleteLoading] = useState(false);
 
@@ -181,7 +184,7 @@ export default function Projects() {
     }
     if (result.data) {
       setProjects((prev) =>
-        prev.map((p) => (p.id === editingProject.id ? result.data! : p))
+        prev.map((p) => (p.id === editingProject.id ? result.data! : p)),
       );
     }
     closeEditModal();
@@ -239,13 +242,14 @@ export default function Projects() {
         title="Projects | Tally"
         description="Projects directory — search, sort, and manage projects."
       />
-      <PageBreadcrumb pageTitle="Projects" />
       {loading ? (
         <div className="flex items-center justify-center py-20">
           <LoadingIcon className="size-150 animate-spin text-brand-500" />
         </div>
       ) : fetchError ? (
-        <div className="py-12 text-center text-sm text-red-500">{fetchError}</div>
+        <div className="py-12 text-center text-sm text-red-500">
+          {fetchError}
+        </div>
       ) : (
         <DataTable<ProjectItem>
           data={projects}
@@ -257,7 +261,7 @@ export default function Projects() {
             currentUser?.is_admin ||
             row.created_by === currentUser?.id ||
             row.members.some(
-              (m) => m.user_id === currentUser?.id && m.role === "leader"
+              (m) => m.user_id === currentUser?.id && m.role === "leader",
             )
           }
           onDelete={openDeleteModal}
@@ -310,11 +314,13 @@ export default function Projects() {
                     ))}
                   </ul>
                 )}
-                {editShowDropdown && editLeaderResults.length === 0 && editLeaderSearch.trim() && (
-                  <div className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg px-4 py-2 text-sm text-gray-500 dark:text-gray-400">
-                    No leaders found.
-                  </div>
-                )}
+                {editShowDropdown &&
+                  editLeaderResults.length === 0 &&
+                  editLeaderSearch.trim() && (
+                    <div className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg px-4 py-2 text-sm text-gray-500 dark:text-gray-400">
+                      No leaders found.
+                    </div>
+                  )}
               </div>
               <div className="flex items-center gap-3">
                 <input

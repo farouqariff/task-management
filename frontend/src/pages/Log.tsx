@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import PageBreadcrumb from "../components/common/PageBreadCrumb";
 import PageMeta from "../components/common/PageMeta";
 import DataTable, { Column } from "../components/tables/DataTable/DataTable";
 import { auditApi, type AuditLogItem } from "../services/api";
@@ -45,9 +44,7 @@ const columns: Column<AuditLogItem>[] = [
     header: "Date",
     sortable: true,
     accessor: (row) => row.created_at,
-    render: (row) => (
-      <span>{new Date(row.created_at).toLocaleString()}</span>
-    ),
+    render: (row) => <span>{new Date(row.created_at).toLocaleString()}</span>,
   },
 ];
 
@@ -73,13 +70,14 @@ export default function Log() {
         title="Audit Logs | Tally"
         description="Audit log — track all actions performed in the system."
       />
-      <PageBreadcrumb pageTitle="Audit Logs" />
       {loading ? (
         <div className="flex items-center justify-center py-20">
           <LoadingIcon className="size-150 animate-spin text-brand-500" />
         </div>
       ) : fetchError ? (
-        <div className="py-12 text-center text-sm text-red-500">{fetchError}</div>
+        <div className="py-12 text-center text-sm text-red-500">
+          {fetchError}
+        </div>
       ) : (
         <DataTable<AuditLogItem>
           data={logs}

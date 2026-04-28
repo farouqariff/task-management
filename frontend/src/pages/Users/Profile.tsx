@@ -1,6 +1,5 @@
 import { useState } from "react";
 import PageMeta from "../../components/common/PageMeta";
-import PageBreadcrumb from "../../components/common/PageBreadCrumb";
 import ComponentCard from "../../components/common/ComponentCard";
 import Label from "../../components/form/Label";
 import Input from "../../components/form/input/InputField";
@@ -87,7 +86,6 @@ export default function Profile() {
         title="Profile | Tally"
         description="Profile settings for your Tally account"
       />
-      <PageBreadcrumb pageTitle="Profile" />
       <div className="max-w-2xl mx-auto">
         <ComponentCard title="Personal Information">
           <div className="space-y-6">

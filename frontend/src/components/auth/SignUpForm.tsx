@@ -14,6 +14,7 @@ export default function SignUpForm() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState("");
   const [firstNameError, setFirstNameError] = useState("");
   const [lastNameError, setLastNameError] = useState("");
@@ -30,10 +31,22 @@ export default function SignUpForm() {
     setPasswordError("");
 
     let hasError = false;
-    if (!firstName.trim()) { setFirstNameError("Please enter first name"); hasError = true; }
-    if (!lastName.trim()) { setLastNameError("Please enter last name"); hasError = true; }
-    if (!email.trim()) { setEmailError("Please enter email"); hasError = true; }
-    if (!password) { setPasswordError("Please enter password"); hasError = true; }
+    if (!firstName.trim()) {
+      setFirstNameError("Please enter first name");
+      hasError = true;
+    }
+    if (!lastName.trim()) {
+      setLastNameError("Please enter last name");
+      hasError = true;
+    }
+    if (!email.trim()) {
+      setEmailError("Please enter email");
+      hasError = true;
+    }
+    if (!password) {
+      setPasswordError("Please enter password");
+      hasError = true;
+    }
     if (hasError) return;
 
     if (password !== confirmPassword) {
@@ -76,7 +89,11 @@ export default function SignUpForm() {
                       value={firstName}
                       onChange={(e) => setFirstName(e.target.value)}
                     />
-                    {firstNameError && <p className="mt-1 text-sm text-error-500">{firstNameError}</p>}
+                    {firstNameError && (
+                      <p className="mt-1 text-sm text-error-500">
+                        {firstNameError}
+                      </p>
+                    )}
                   </div>
                   <div className="sm:col-span-1">
                     <Label>
@@ -88,7 +105,11 @@ export default function SignUpForm() {
                       value={lastName}
                       onChange={(e) => setLastName(e.target.value)}
                     />
-                    {lastNameError && <p className="mt-1 text-sm text-error-500">{lastNameError}</p>}
+                    {lastNameError && (
+                      <p className="mt-1 text-sm text-error-500">
+                        {lastNameError}
+                      </p>
+                    )}
                   </div>
                 </div>
                 <div>
@@ -101,7 +122,9 @@ export default function SignUpForm() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                   />
-                  {emailError && <p className="mt-1 text-sm text-error-500">{emailError}</p>}
+                  {emailError && (
+                    <p className="mt-1 text-sm text-error-500">{emailError}</p>
+                  )}
                 </div>
                 <div>
                   <Label>
@@ -125,7 +148,11 @@ export default function SignUpForm() {
                       )}
                     </span>
                   </div>
-                  {passwordError && <p className="mt-1 text-sm text-error-500">{passwordError}</p>}
+                  {passwordError && (
+                    <p className="mt-1 text-sm text-error-500">
+                      {passwordError}
+                    </p>
+                  )}
                 </div>
                 <div>
                   <Label>
@@ -133,16 +160,18 @@ export default function SignUpForm() {
                   </Label>
                   <div className="relative">
                     <Input
-                      type={showPassword ? "text" : "password"}
+                      type={showConfirmPassword ? "text" : "password"}
                       placeholder="Re-enter your password"
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
                     />
                     <span
-                      onClick={() => setShowPassword(!showPassword)}
+                      onClick={() =>
+                        setShowConfirmPassword(!showConfirmPassword)
+                      }
                       className="absolute z-30 -translate-y-1/2 cursor-pointer right-4 top-1/2"
                     >
-                      {showPassword ? (
+                      {showConfirmPassword ? (
                         <EyeIcon className="fill-gray-500 dark:fill-gray-400 size-5" />
                       ) : (
                         <EyeCloseIcon className="fill-gray-500 dark:fill-gray-400 size-5" />
@@ -151,9 +180,7 @@ export default function SignUpForm() {
                   </div>
                 </div>
 
-                {error && (
-                  <p className="text-sm text-error-500">{error}</p>
-                )}
+                {error && <p className="text-sm text-error-500">{error}</p>}
 
                 <div>
                   <button

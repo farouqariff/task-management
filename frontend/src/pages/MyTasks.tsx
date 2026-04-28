@@ -1,5 +1,4 @@
 import { memo, useCallback, useEffect, useMemo, useState } from "react";
-import PageBreadcrumb from "../components/common/PageBreadCrumb";
 import PageMeta from "../components/common/PageMeta";
 import Badge from "../components/ui/badge/Badge";
 import {
@@ -39,7 +38,12 @@ interface TaskRowProps {
   onDelete: (task: TaskItem) => void;
 }
 
-const TaskRow = memo(function TaskRow({ task, onEdit, onToggle, onDelete }: TaskRowProps) {
+const TaskRow = memo(function TaskRow({
+  task,
+  onEdit,
+  onToggle,
+  onDelete,
+}: TaskRowProps) {
   const completed = task.status === "completed";
   return (
     <div className="flex flex-wrap items-center gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3 transition hover:border-gray-300 dark:border-gray-800 dark:bg-white/[0.03] dark:hover:border-gray-700">
@@ -178,14 +182,18 @@ const TaskSection = memo(function TaskSection({
 
 export default function MyTasks() {
   const [loading, setLoading] = useState(true);
-  const [personalProjectId, setPersonalProjectId] = useState<number | null>(null);
+  const [personalProjectId, setPersonalProjectId] = useState<number | null>(
+    null,
+  );
   const [tasks, setTasks] = useState<TaskItem[]>([]);
   const [activeTab, setActiveTab] = useState<TabKey>("todo");
   const { isOpen, openModal, closeModal } = useModal();
 
   // Create task state
   const [taskName, setTaskName] = useState("");
-  const [taskPriority, setTaskPriority] = useState<"low" | "medium" | "high">("low");
+  const [taskPriority, setTaskPriority] = useState<"low" | "medium" | "high">(
+    "low",
+  );
   const [taskDueDate, setTaskDueDate] = useState("");
   const [taskError, setTaskError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -193,7 +201,9 @@ export default function MyTasks() {
   // Edit task state
   const [editingTask, setEditingTask] = useState<TaskItem | null>(null);
   const [editTaskName, setEditTaskName] = useState("");
-  const [editTaskPriority, setEditTaskPriority] = useState<"low" | "medium" | "high">("low");
+  const [editTaskPriority, setEditTaskPriority] = useState<
+    "low" | "medium" | "high"
+  >("low");
   const [editTaskDueDate, setEditTaskDueDate] = useState("");
   const [editTaskError, setEditTaskError] = useState<string | null>(null);
   const [editTaskSaving, setEditTaskSaving] = useState(false);
@@ -279,7 +289,10 @@ export default function MyTasks() {
     }
     setEditTaskSaving(false);
     closeEditTask();
-    if (result.data) setTasks((prev) => prev.map((t) => (t.id === editingTask.id ? result.data! : t)));
+    if (result.data)
+      setTasks((prev) =>
+        prev.map((t) => (t.id === editingTask.id ? result.data! : t)),
+      );
   };
 
   const toggleTask = useCallback(async (task: TaskItem) => {
@@ -322,12 +335,7 @@ export default function MyTasks() {
 
   return (
     <>
-      <PageMeta
-        title="My Tasks | Tally"
-        description="My tasks page"
-      />
-      <PageBreadcrumb pageTitle="My Tasks" />
-
+      <PageMeta title="My Tasks | Tally" description="My tasks page" />
       {loading ? (
         <div className="flex items-center justify-center py-20">
           <LoadingIcon className="size-150 animate-spin text-brand-500" />
@@ -457,7 +465,11 @@ export default function MyTasks() {
               <Button size="sm" variant="outline" onClick={closeEditTask}>
                 Cancel
               </Button>
-              <Button size="sm" onClick={handleEditTaskSave} disabled={editTaskSaving}>
+              <Button
+                size="sm"
+                onClick={handleEditTaskSave}
+                disabled={editTaskSaving}
+              >
                 {editTaskSaving ? "Saving..." : "Save Changes"}
               </Button>
             </div>

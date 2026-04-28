@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import PageBreadcrumb from "../../components/common/PageBreadCrumb";
 import PageMeta from "../../components/common/PageMeta";
 import DataTable, { Column } from "../../components/tables/DataTable/DataTable";
 import { usersApi, type UserItem } from "../../services/api";
@@ -76,13 +75,29 @@ export default function Users() {
 
   const handleSave = async () => {
     setAddError("");
-    if (!addFirstName.trim()) { setAddError("Please enter first name"); return; }
-    if (!addLastName.trim()) { setAddError("Please enter last name"); return; }
-    if (!addEmail.trim()) { setAddError("Please enter email"); return; }
+    if (!addFirstName.trim()) {
+      setAddError("Please enter first name");
+      return;
+    }
+    if (!addLastName.trim()) {
+      setAddError("Please enter last name");
+      return;
+    }
+    if (!addEmail.trim()) {
+      setAddError("Please enter email");
+      return;
+    }
     setAddSaving(true);
-    const result = await usersApi.adminCreate(addFirstName, addLastName, addEmail);
+    const result = await usersApi.adminCreate(
+      addFirstName,
+      addLastName,
+      addEmail,
+    );
     setAddSaving(false);
-    if (result.error) { setAddError(result.error); return; }
+    if (result.error) {
+      setAddError(result.error);
+      return;
+    }
     if (result.data) setUsers((prev) => [...prev, result.data!]);
     closeAddModal();
   };
@@ -103,9 +118,18 @@ export default function Users() {
   const handleEditSave = async () => {
     if (!editingUser) return;
     setEditError("");
-    if (!editFirstName.trim()) { setEditError("Please enter first name"); return; }
-    if (!editLastName.trim()) { setEditError("Please enter last name"); return; }
-    if (!editEmail.trim()) { setEditError("Please enter email"); return; }
+    if (!editFirstName.trim()) {
+      setEditError("Please enter first name");
+      return;
+    }
+    if (!editLastName.trim()) {
+      setEditError("Please enter last name");
+      return;
+    }
+    if (!editEmail.trim()) {
+      setEditError("Please enter email");
+      return;
+    }
     setEditSaving(true);
     const result = await usersApi.update(editingUser.id, {
       first_name: editFirstName,
@@ -155,13 +179,14 @@ export default function Users() {
         title="Users | Tally"
         description="Users directory — search, sort, and manage team members."
       />
-      <PageBreadcrumb pageTitle="Users" />
       {loading ? (
         <div className="flex items-center justify-center py-20">
           <LoadingIcon className="size-150 animate-spin text-brand-500" />
         </div>
       ) : fetchError ? (
-        <div className="py-12 text-center text-sm text-red-500">{fetchError}</div>
+        <div className="py-12 text-center text-sm text-red-500">
+          {fetchError}
+        </div>
       ) : (
         <DataTable<UserItem>
           data={users}
@@ -175,7 +200,11 @@ export default function Users() {
         />
       )}
 
-      <Modal isOpen={isOpen} onClose={closeAddModal} className="max-w-[584px] m-4">
+      <Modal
+        isOpen={isOpen}
+        onClose={closeAddModal}
+        className="max-w-[584px] m-4"
+      >
         <div className="relative w-full rounded-3xl bg-white p-6 dark:bg-gray-900">
           <h4 className="mb-6 text-lg font-semibold text-gray-800 dark:text-white/90">
             New User
@@ -214,7 +243,8 @@ export default function Users() {
               <p className="mt-3 text-sm text-red-500">{addError}</p>
             )}
             <p className="mt-3 text-xs text-gray-400 dark:text-gray-500">
-              A temporary password will be generated and sent to the user's email.
+              A temporary password will be generated and sent to the user's
+              email.
             </p>
             <div className="mt-6 flex items-center justify-end gap-3">
               <Button size="sm" variant="outline" onClick={closeAddModal}>

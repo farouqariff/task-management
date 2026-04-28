@@ -1,12 +1,12 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "react-router";
-import PageBreadcrumb from "../../components/common/PageBreadCrumb";
 import PageMeta from "../../components/common/PageMeta";
 import Badge from "../../components/ui/badge/Badge";
 import {
   AddIcon,
   CalenderIcon,
   LoadingIcon,
+  MoreDotIcon,
   PencilIcon,
   TrashBinIcon,
   TaskToDoIcon,
@@ -14,6 +14,8 @@ import {
 } from "../../icons";
 import Button from "../../components/ui/button/Button";
 import { Modal } from "../../components/ui/modal";
+import { Dropdown } from "../../components/ui/dropdown/Dropdown";
+import { DropdownItem } from "../../components/ui/dropdown/DropdownItem";
 import { useModal } from "../../hooks/useModal";
 import Input from "../../components/form/input/InputField";
 import Label from "../../components/form/Label";
@@ -23,6 +25,7 @@ import {
   tasksApi,
   projectsApi,
   usersApi,
+  type ProjectItem,
   type TaskItem,
   type ProjectMemberItem,
   type UserItem,
@@ -52,15 +55,25 @@ interface TaskRowProps {
   onDelete: (task: TaskItem) => void;
 }
 
-const TaskRow = memo(function TaskRow({ task, canEdit, onEdit, onToggle, onDelete }: TaskRowProps) {
+const TaskRow = memo(function TaskRow({
+  task,
+  canEdit,
+  onEdit,
+  onToggle,
+  onDelete,
+}: TaskRowProps) {
   const completed = task.status === "completed";
   return (
     <div className="flex flex-wrap items-center gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3 transition hover:border-gray-300 dark:border-gray-800 dark:bg-white/[0.03] dark:hover:border-gray-700">
-      <label className={`flex items-center ${canEdit ? "cursor-pointer" : "cursor-default"}`}>
+      <label
+        className={`flex items-center ${canEdit ? "cursor-pointer" : "cursor-default"}`}
+      >
         <input
           type="checkbox"
           checked={completed}
-          onChange={() => { if (canEdit) onToggle(task); }}
+          onChange={() => {
+            if (canEdit) onToggle(task);
+          }}
           className="peer sr-only"
           disabled={!canEdit}
         />
@@ -217,8 +230,13 @@ export default function ProjectDetail() {
 
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
+  const [project, setProject] = useState<ProjectItem | null>(null);
   const [tasks, setTasks] = useState<TaskItem[]>([]);
   const [members, setMembers] = useState<ProjectMemberItem[]>([]);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isCompleteModalOpen, setIsCompleteModalOpen] = useState(false);
+  const [completeLoading, setCompleteLoading] = useState(false);
+  const [completeError, setCompleteError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<TabKey>("todo");
   const { isOpen, openModal, closeModal } = useModal();
   const {
@@ -233,12 +251,19 @@ export default function ProjectDetail() {
   const [showNewMemberDropdown, setShowNewMemberDropdown] = useState(false);
   const [newMemberError, setNewMemberError] = useState<string | null>(null);
   const [newMemberSaving, setNewMemberSaving] = useState(false);
-  const newMemberDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const newMemberDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
 
   // Project-level manage permission (admin or project leader)
-  const canManage =
-    currentUser?.is_admin ||
-    members.some((m) => m.user_id === currentUser?.id && m.role === "leader");
+  const isAdmin = currentUser?.is_admin ?? false;
+  const isLeader = members.some(
+    (m) => m.user_id === currentUser?.id && m.role === "leader",
+  );
+  const canManage = isAdmin || isLeader;
+  const isCompleted = project?.is_completed ?? false;
+  // Show dropdown: leaders only when not completed; admin always
+  const showCompleteDropdown = isAdmin || (isLeader && !isCompleted);
 
   // Task-level manage permission: admin, project leader, or task creator
   const canManageTask = (task: TaskItem) =>
@@ -251,25 +276,34 @@ export default function ProjectDetail() {
 
   // Add task state
   const [taskName, setTaskName] = useState("");
-  const [taskPriority, setTaskPriority] = useState<"low" | "medium" | "high">("low");
+  const [taskPriority, setTaskPriority] = useState<"low" | "medium" | "high">(
+    "low",
+  );
   const [taskDueDate, setTaskDueDate] = useState("");
   const [memberSearch, setMemberSearch] = useState("");
-  const [selectedAssignees, setSelectedAssignees] = useState<ProjectMemberItem[]>([]);
+  const [selectedAssignees, setSelectedAssignees] = useState<
+    ProjectMemberItem[]
+  >([]);
   const [taskError, setTaskError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
   // Edit task state
   const [editingTask, setEditingTask] = useState<TaskItem | null>(null);
   const [editTaskName, setEditTaskName] = useState("");
-  const [editTaskPriority, setEditTaskPriority] = useState<"low" | "medium" | "high">("low");
+  const [editTaskPriority, setEditTaskPriority] = useState<
+    "low" | "medium" | "high"
+  >("low");
   const [editTaskDueDate, setEditTaskDueDate] = useState("");
-  const [editTaskAssignees, setEditTaskAssignees] = useState<{ user_id: number; user_email: string }[]>([]);
+  const [editTaskAssignees, setEditTaskAssignees] = useState<
+    { user_id: number; user_email: string }[]
+  >([]);
   const [editTaskMemberSearch, setEditTaskMemberSearch] = useState("");
   const [editTaskError, setEditTaskError] = useState<string | null>(null);
   const [editTaskSaving, setEditTaskSaving] = useState(false);
 
   // Delete member state
-  const [deletingMember, setDeletingMember] = useState<ProjectMemberItem | null>(null);
+  const [deletingMember, setDeletingMember] =
+    useState<ProjectMemberItem | null>(null);
   const [deleteMemberError, setDeleteMemberError] = useState("");
   const [deleteMemberLoading, setDeleteMemberLoading] = useState(false);
 
@@ -282,12 +316,19 @@ export default function ProjectDetail() {
     Promise.all([
       tasksApi.list(projectId),
       projectsApi.getMembers(projectId),
-    ]).then(([tasksResult, membersResult]) => {
-      if (tasksResult.error || membersResult.error) {
-        setFetchError(tasksResult.error || membersResult.error || "Failed to load");
+      projectsApi.get(projectId),
+    ]).then(([tasksResult, membersResult, projectResult]) => {
+      if (tasksResult.error || membersResult.error || projectResult.error) {
+        setFetchError(
+          tasksResult.error ||
+            membersResult.error ||
+            projectResult.error ||
+            "Failed to load",
+        );
       } else {
         if (tasksResult.data) setTasks(tasksResult.data);
         if (membersResult.data) setMembers(membersResult.data);
+        if (projectResult.data) setProject(projectResult.data);
       }
       setLoading(false);
     });
@@ -308,7 +349,9 @@ export default function ProjectDetail() {
     if (!editTaskMemberSearch.trim()) return [];
     return members.filter(
       (m) =>
-        m.user_email.toLowerCase().includes(editTaskMemberSearch.toLowerCase()) &&
+        m.user_email
+          .toLowerCase()
+          .includes(editTaskMemberSearch.toLowerCase()) &&
         !editTaskAssignees.some((a) => a.user_id === m.user_id),
     );
   }, [members, editTaskMemberSearch, editTaskAssignees]);
@@ -322,7 +365,8 @@ export default function ProjectDetail() {
       for (const assignee of task.assignees) {
         if (counts[assignee.user_id]) {
           if (task.status === "todo") counts[assignee.user_id].todo++;
-          else if (task.status === "completed") counts[assignee.user_id].completed++;
+          else if (task.status === "completed")
+            counts[assignee.user_id].completed++;
         }
       }
     }
@@ -341,7 +385,8 @@ export default function ProjectDetail() {
   const handleNewMemberSearch = (value: string) => {
     setNewMemberSearch(value);
     setNewMemberId(null);
-    if (newMemberDebounceRef.current) clearTimeout(newMemberDebounceRef.current);
+    if (newMemberDebounceRef.current)
+      clearTimeout(newMemberDebounceRef.current);
     if (!value.trim()) {
       setNewMemberResults([]);
       setShowNewMemberDropdown(false);
@@ -373,7 +418,11 @@ export default function ProjectDetail() {
       return;
     }
     setNewMemberSaving(true);
-    const result = await projectsApi.addMember(projectId, newMemberId, "member");
+    const result = await projectsApi.addMember(
+      projectId,
+      newMemberId,
+      "member",
+    );
     if (result.error) {
       setNewMemberError(result.error);
       setNewMemberSaving(false);
@@ -424,7 +473,9 @@ export default function ProjectDetail() {
       return;
     }
     await Promise.all(
-      selectedAssignees.map((a) => tasksApi.addAssignee(result.data!.id, a.user_id)),
+      selectedAssignees.map((a) =>
+        tasksApi.addAssignee(result.data!.id, a.user_id),
+      ),
     );
     setSaving(false);
     handleModalClose();
@@ -436,7 +487,12 @@ export default function ProjectDetail() {
     setEditTaskName(task.name);
     setEditTaskPriority(task.priority);
     setEditTaskDueDate(task.due_date ? task.due_date.split("T")[0] : "");
-    setEditTaskAssignees(task.assignees.map((a) => ({ user_id: a.user_id, user_email: a.user_email })));
+    setEditTaskAssignees(
+      task.assignees.map((a) => ({
+        user_id: a.user_id,
+        user_email: a.user_email,
+      })),
+    );
     setEditTaskMemberSearch("");
     setEditTaskError(null);
   }, []);
@@ -460,7 +516,11 @@ export default function ProjectDetail() {
     const isManager = canManageTask(editingTask);
 
     const updatePayload = isManager
-      ? { name: editTaskName.trim(), priority: editTaskPriority, due_date: editTaskDueDate || null }
+      ? {
+          name: editTaskName.trim(),
+          priority: editTaskPriority,
+          due_date: editTaskDueDate || null,
+        }
       : { priority: editTaskPriority };
 
     const result = await tasksApi.update(editingTask.id, updatePayload);
@@ -473,11 +533,17 @@ export default function ProjectDetail() {
     if (isManager) {
       const originalIds = new Set(editingTask.assignees.map((a) => a.user_id));
       const newIds = new Set(editTaskAssignees.map((a) => a.user_id));
-      const toAdd = editTaskAssignees.filter((a) => !originalIds.has(a.user_id));
-      const toRemove = editingTask.assignees.filter((a) => !newIds.has(a.user_id));
+      const toAdd = editTaskAssignees.filter(
+        (a) => !originalIds.has(a.user_id),
+      );
+      const toRemove = editingTask.assignees.filter(
+        (a) => !newIds.has(a.user_id),
+      );
       await Promise.all([
         ...toAdd.map((a) => tasksApi.addAssignee(editingTask.id, a.user_id)),
-        ...toRemove.map((a) => tasksApi.removeAssignee(editingTask.id, a.user_id)),
+        ...toRemove.map((a) =>
+          tasksApi.removeAssignee(editingTask.id, a.user_id),
+        ),
       ]);
     }
 
@@ -500,13 +566,18 @@ export default function ProjectDetail() {
     if (!deletingMember) return;
     setDeleteMemberLoading(true);
     setDeleteMemberError("");
-    const result = await projectsApi.removeMember(projectId, deletingMember.user_id);
+    const result = await projectsApi.removeMember(
+      projectId,
+      deletingMember.user_id,
+    );
     setDeleteMemberLoading(false);
     if (result.error) {
       setDeleteMemberError(result.error);
       return;
     }
-    setMembers((prev) => prev.filter((m) => m.user_id !== deletingMember.user_id));
+    setMembers((prev) =>
+      prev.filter((m) => m.user_id !== deletingMember.user_id),
+    );
     closeDeleteMember();
   };
 
@@ -522,6 +593,27 @@ export default function ProjectDetail() {
     setTasks((prev) => prev.filter((t) => t.id !== task.id));
     await tasksApi.delete(task.id);
   }, []);
+
+  const handleMarkComplete = async () => {
+    setCompleteLoading(true);
+    setCompleteError(null);
+    const result = await projectsApi.update(projectId, { is_completed: true });
+    setCompleteLoading(false);
+    if (result.error) {
+      setCompleteError(result.error);
+      return;
+    }
+    setProject((prev) => (prev ? { ...prev, is_completed: true } : prev));
+    setIsCompleteModalOpen(false);
+  };
+
+  const handleMarkNotComplete = async () => {
+    setIsDropdownOpen(false);
+    const result = await projectsApi.update(projectId, { is_completed: false });
+    if (result.data) {
+      setProject((prev) => (prev ? { ...prev, is_completed: false } : prev));
+    }
+  };
 
   const counts = useMemo(
     () => ({
@@ -552,18 +644,15 @@ export default function ProjectDetail() {
 
   return (
     <>
-      <PageMeta
-        title="Project | Tally"
-        description="Project detail page"
-      />
-      <PageBreadcrumb pageTitle="Project Tasks" />
-
+      <PageMeta title="Project | Tally" description="Project detail page" />
       {loading ? (
         <div className="flex items-center justify-center py-20">
           <LoadingIcon className="size-150 animate-spin text-brand-500" />
         </div>
       ) : fetchError ? (
-        <div className="py-12 text-center text-sm text-red-500">{fetchError}</div>
+        <div className="py-12 text-center text-sm text-red-500">
+          {fetchError}
+        </div>
       ) : (
         <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] xl:p-6">
           <div className="flex flex-wrap items-center justify-between gap-4">
@@ -597,27 +686,65 @@ export default function ProjectDetail() {
               })}
             </div>
 
-            {activeTab === "team-members" ? (
-              canManage && (
+            <div className="flex items-center gap-2">
+              {activeTab === "team-members" ? (
+                canManage && (
+                  <Button
+                    size="sm"
+                    variant="primary"
+                    endIcon={<AddIcon className="size-5" />}
+                    onClick={isCompleted ? undefined : openMemberModal}
+                    disabled={isCompleted}
+                  >
+                    Add Member
+                  </Button>
+                )
+              ) : (
                 <Button
                   size="sm"
                   variant="primary"
                   endIcon={<AddIcon className="size-5" />}
-                  onClick={openMemberModal}
+                  onClick={isCompleted ? undefined : openModal}
+                  disabled={isCompleted}
                 >
-                  Add Member
+                  Add New Task
                 </Button>
-              )
-            ) : (
-              <Button
-                size="sm"
-                variant="primary"
-                endIcon={<AddIcon className="size-5" />}
-                onClick={openModal}
-              >
-                Add New Task
-              </Button>
-            )}
+              )}
+              {showCompleteDropdown && (
+                <div className="relative inline-block">
+                  <button
+                    className="dropdown-toggle"
+                    onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                  >
+                    <MoreDotIcon className="size-6 text-gray-400 hover:text-gray-700 dark:hover:text-gray-300" />
+                  </button>
+                  <Dropdown
+                    isOpen={isDropdownOpen}
+                    onClose={() => setIsDropdownOpen(false)}
+                    className="w-48 p-2"
+                  >
+                    {!isCompleted ? (
+                      <DropdownItem
+                        onItemClick={() => {
+                          setIsDropdownOpen(false);
+                          setIsCompleteModalOpen(true);
+                        }}
+                        className="flex w-full rounded-lg font-normal text-left text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-white/5 dark:hover:text-gray-300"
+                      >
+                        Mark as Completed
+                      </DropdownItem>
+                    ) : (
+                      <DropdownItem
+                        onItemClick={handleMarkNotComplete}
+                        className="flex w-full rounded-lg font-normal text-left text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-white/5 dark:hover:text-gray-300"
+                      >
+                        Mark as Not Completed
+                      </DropdownItem>
+                    )}
+                  </Dropdown>
+                </div>
+              )}
+            </div>
           </div>
 
           <div className="mt-6 space-y-8">
@@ -630,7 +757,10 @@ export default function ProjectDetail() {
                 ) : (
                   <div className="space-y-3">
                     {members.map((m) => {
-                      const tc = memberTaskCounts[m.user_id] ?? { todo: 0, completed: 0 };
+                      const tc = memberTaskCounts[m.user_id] ?? {
+                        todo: 0,
+                        completed: 0,
+                      };
                       return (
                         <div
                           key={m.user_id}
@@ -796,30 +926,35 @@ export default function ProjectDetail() {
                     value={editTaskMemberSearch}
                     onChange={(e) => setEditTaskMemberSearch(e.target.value)}
                   />
-                  {editTaskMemberSearch.trim() && editFilteredMembers.length > 0 && (
-                    <ul className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg max-h-48 overflow-y-auto">
-                      {editFilteredMembers.map((m) => (
-                        <li
-                          key={m.user_id}
-                          onClick={() => {
-                            setEditTaskAssignees((prev) => [
-                              ...prev,
-                              { user_id: m.user_id, user_email: m.user_email },
-                            ]);
-                            setEditTaskMemberSearch("");
-                          }}
-                          className="px-4 py-2 cursor-pointer text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
-                        >
-                          {m.user_email}
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                  {editTaskMemberSearch.trim() && editFilteredMembers.length === 0 && (
-                    <div className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg px-4 py-2 text-sm text-gray-500 dark:text-gray-400">
-                      No members found.
-                    </div>
-                  )}
+                  {editTaskMemberSearch.trim() &&
+                    editFilteredMembers.length > 0 && (
+                      <ul className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                        {editFilteredMembers.map((m) => (
+                          <li
+                            key={m.user_id}
+                            onClick={() => {
+                              setEditTaskAssignees((prev) => [
+                                ...prev,
+                                {
+                                  user_id: m.user_id,
+                                  user_email: m.user_email,
+                                },
+                              ]);
+                              setEditTaskMemberSearch("");
+                            }}
+                            className="px-4 py-2 cursor-pointer text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+                          >
+                            {m.user_email}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  {editTaskMemberSearch.trim() &&
+                    editFilteredMembers.length === 0 && (
+                      <div className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg px-4 py-2 text-sm text-gray-500 dark:text-gray-400">
+                        No members found.
+                      </div>
+                    )}
                 </div>
               )}
             </div>
@@ -830,7 +965,11 @@ export default function ProjectDetail() {
               <Button size="sm" variant="outline" onClick={closeEditTask}>
                 Cancel
               </Button>
-              <Button size="sm" onClick={handleEditTaskSave} disabled={editTaskSaving}>
+              <Button
+                size="sm"
+                onClick={handleEditTaskSave}
+                disabled={editTaskSaving}
+              >
                 {editTaskSaving ? "Saving..." : "Save Changes"}
               </Button>
             </div>
@@ -952,10 +1091,18 @@ export default function ProjectDetail() {
               <p className="mt-3 text-sm text-red-500">{newMemberError}</p>
             )}
             <div className="mt-6 flex items-center justify-end gap-3">
-              <Button size="sm" variant="outline" onClick={handleMemberModalClose}>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleMemberModalClose}
+              >
                 Cancel
               </Button>
-              <Button size="sm" onClick={handleAddMember} disabled={newMemberSaving}>
+              <Button
+                size="sm"
+                onClick={handleAddMember}
+                disabled={newMemberSaving}
+              >
                 {newMemberSaving ? "Adding..." : "Add"}
               </Button>
             </div>
@@ -1067,6 +1214,78 @@ export default function ProjectDetail() {
               </Button>
             </div>
           </form>
+        </div>
+      </Modal>
+
+      {/* Mark as Completed Warning Modal */}
+      <Modal
+        isOpen={isCompleteModalOpen}
+        onClose={() => {
+          setIsCompleteModalOpen(false);
+          setCompleteError(null);
+        }}
+        className="max-w-[507px] m-4"
+      >
+        <div className="relative w-full rounded-3xl bg-white p-6 text-center dark:bg-gray-900 sm:p-10">
+          <div className="mx-auto mb-7 flex h-24 w-24 items-center justify-center">
+            <svg
+              width="96"
+              height="96"
+              viewBox="0 0 96 96"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <g className="fill-warning-50 dark:fill-warning-500/15">
+                <circle cx="48" cy="24" r="20" />
+                <circle cx="48" cy="72" r="20" />
+                <circle cx="24" cy="48" r="20" />
+                <circle cx="72" cy="48" r="20" />
+                <circle cx="31" cy="31" r="20" />
+                <circle cx="65" cy="31" r="20" />
+                <circle cx="31" cy="65" r="20" />
+                <circle cx="65" cy="65" r="20" />
+              </g>
+              <path
+                d="M48 36V54"
+                className="stroke-warning-500"
+                strokeWidth="4"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <circle cx="48" cy="63" r="3.5" className="fill-warning-500" />
+            </svg>
+          </div>
+          <h4 className="mb-3 text-title-sm font-semibold text-gray-800 dark:text-white/90">
+            Warning Alert!
+          </h4>
+          <p className="mx-auto mb-6 max-w-[380px] text-sm text-gray-500 dark:text-gray-400">
+            Are you sure you want to mark this project as completed? Once marked
+            as completed, no further changes can be made.
+          </p>
+          {completeError && (
+            <p className="mb-4 text-sm text-error-500">{completeError}</p>
+          )}
+          <div className="flex items-center justify-center gap-3">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                setIsCompleteModalOpen(false);
+                setCompleteError(null);
+              }}
+              disabled={completeLoading}
+            >
+              Cancel
+            </Button>
+            <button
+              type="button"
+              onClick={handleMarkComplete}
+              disabled={completeLoading}
+              className="inline-flex items-center justify-center gap-2 rounded-lg bg-warning-500 px-4 py-3 text-sm font-medium text-white shadow-theme-xs transition hover:bg-warning-600 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {completeLoading ? "Marking..." : "Okay, Got It"}
+            </button>
+          </div>
         </div>
       </Modal>
     </>

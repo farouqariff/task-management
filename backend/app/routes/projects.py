@@ -145,6 +145,9 @@ def update_project(project_id):
     if payload:
         project_schema.load(payload, instance=project, partial=True)
 
+    if was_completed and not project.is_completed and not me_.is_admin:
+        return jsonify({"error": "Only admins can revert a completed project"}), 403
+
     if not was_completed and project.is_completed:
         for lid in project.leader_ids():
             db.session.add(Notification(

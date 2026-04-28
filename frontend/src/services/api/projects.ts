@@ -21,6 +21,7 @@ export interface ProjectItem {
 
 export const projectsApi = {
   list: () => request<ProjectItem[]>("/projects"),
+  get: (project_id: number) => request<ProjectItem>(`/projects/${project_id}`),
   create: (name: string, leader_id: number) =>
     request<ProjectItem>("/projects", {
       method: "POST",
