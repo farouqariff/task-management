@@ -234,7 +234,7 @@ A regular member of a project.
 |---|---|
 | View their project and its tasks | Yes |
 | Update status and priority of tasks assigned to them | Yes |
-| Create tasks | No |
+| Create tasks | Yes |
 | Edit or delete tasks not assigned to them | No |
 | Add / remove project members | No |
 | Mark project as completed | No |
