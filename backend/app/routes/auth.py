@@ -1,5 +1,12 @@
+from datetime import timedelta
+
 from flask import Blueprint, request, jsonify, current_app
-from flask_jwt_extended import create_access_token
+from flask_jwt_extended import (
+    create_access_token,
+    create_refresh_token,
+    jwt_required,
+    get_jwt_identity,
+)
 from flask_mail import Message
 from sqlalchemy.exc import IntegrityError
 
@@ -49,17 +56,45 @@ def register():
 
 @bp.post("/login")
 def login():
-    data = login_schema.load(request.get_json(silent=True) or {})
+    raw = dict(request.get_json(silent=True) or {})
+    keep_logged_in = bool(raw.pop("keep_logged_in", False))
+    data = login_schema.load(raw)
 
     user = User.query.filter_by(email=data["email"]).first()
     if not user or not user.check_password(data["password"]):
         return jsonify({"error": "invalid credentials"}), 401
 
-    token = create_access_token(
+    access_token = create_access_token(
         identity=str(user.id),
         additional_claims={"email": user.email, "is_admin": user.is_admin},
+        expires_delta=timedelta(hours=1),
     )
-    return jsonify({"access_token": token, "user": user.to_dict()}), 200
+
+    response: dict = {"access_token": access_token, "user": user.to_dict()}
+
+    if keep_logged_in:
+        response["refresh_token"] = create_refresh_token(
+            identity=str(user.id),
+            expires_delta=timedelta(days=30),
+        )
+
+    return jsonify(response), 200
+
+
+@bp.post("/refresh")
+@jwt_required(refresh=True)
+def refresh():
+    identity = get_jwt_identity()
+    user = User.query.get(int(identity))
+    if not user:
+        return jsonify({"error": "user not found"}), 404
+
+    new_token = create_access_token(
+        identity=identity,
+        additional_claims={"email": user.email, "is_admin": user.is_admin},
+        expires_delta=timedelta(hours=1),
+    )
+    return jsonify({"access_token": new_token}), 200
 
 
 @bp.post("/forgot-password")

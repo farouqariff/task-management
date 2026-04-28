@@ -10,7 +10,7 @@ import { useAuth } from "../../context/AuthContext";
 import { usersApi } from "../../services/api";
 
 export default function Profile() {
-  const { user, token, login } = useAuth();
+  const { user, token, updateUser } = useAuth();
 
   const [firstName, setFirstName] = useState(user?.first_name ?? "");
   const [lastName, setLastName] = useState(user?.last_name ?? "");
@@ -69,13 +69,13 @@ export default function Profile() {
     }
 
     if (token && result.data) {
-      login(token, {
+      updateUser({
         ...user,
         first_name: result.data.first_name,
         last_name: result.data.last_name,
         full_name: result.data.full_name,
         email: result.data.email,
-      }, true);
+      });
     }
     setNewPassword("");
     setConfirmPassword("");

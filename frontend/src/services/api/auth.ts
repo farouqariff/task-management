@@ -3,6 +3,7 @@ import { request } from "./client";
 
 export interface LoginResponse {
   access_token: string;
+  refresh_token?: string;
   user: AuthUser;
 }
 
@@ -12,10 +13,10 @@ export interface RegisterResponse {
 }
 
 export const authApi = {
-  login: (email: string, password: string) =>
+  login: (email: string, password: string, keepLoggedIn: boolean) =>
     request<LoginResponse>("/auth/login", {
       method: "POST",
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ email, password, keep_logged_in: keepLoggedIn }),
     }),
 
   register: (first_name: string, last_name: string, email: string, password: string) =>

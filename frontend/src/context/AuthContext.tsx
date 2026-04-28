@@ -13,7 +13,8 @@ export interface AuthUser {
 interface AuthContextType {
   token: string | null;
   user: AuthUser | null;
-  login: (token: string, user: AuthUser, keepLoggedIn: boolean) => void;
+  login: (token: string, user: AuthUser, keepLoggedIn: boolean, refreshToken?: string) => void;
+  updateUser: (user: AuthUser) => void;
   logout: () => void;
   isAuthenticated: boolean;
 }
@@ -31,6 +32,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       localStorage.removeItem("token");
       localStorage.removeItem("user");
       localStorage.removeItem("session_only");
+      localStorage.removeItem("refresh_token");
       return null;
     }
     return stored;
@@ -42,12 +44,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return JSON.parse(stored) as AuthUser;
   });
 
-  const login = (newToken: string, newUser: AuthUser, keepLoggedIn: boolean) => {
+  const login = (newToken: string, newUser: AuthUser, keepLoggedIn: boolean, refreshToken?: string) => {
     localStorage.setItem("token", newToken);
     localStorage.setItem("user", JSON.stringify(newUser));
-    if (keepLoggedIn) {
+    if (keepLoggedIn && refreshToken) {
+      localStorage.setItem("refresh_token", refreshToken);
       localStorage.removeItem("session_only");
     } else {
+      localStorage.removeItem("refresh_token");
       localStorage.setItem("session_only", "true");
     }
     sessionStorage.setItem("session_active", "true");
@@ -55,10 +59,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(newUser);
   };
 
+  const updateUser = (newUser: AuthUser) => {
+    localStorage.setItem("user", JSON.stringify(newUser));
+    setUser(newUser);
+  };
+
   const logout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
     localStorage.removeItem("session_only");
+    localStorage.removeItem("refresh_token");
     sessionStorage.removeItem("session_active");
     setToken(null);
     setUser(null);
@@ -66,7 +76,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ token, user, login, logout, isAuthenticated: !!token }}
+      value={{ token, user, login, updateUser, logout, isAuthenticated: !!token }}
     >
       {children}
     </AuthContext.Provider>

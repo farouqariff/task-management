@@ -39,7 +39,7 @@ export default function SignInForm() {
     if (hasError) return;
 
     setLoading(true);
-    const result = await authApi.login(email, password);
+    const result = await authApi.login(email, password, isChecked);
     setLoading(false);
 
     if (result.error || !result.data) {
@@ -47,7 +47,7 @@ export default function SignInForm() {
       return;
     }
 
-    login(result.data.access_token, result.data.user, isChecked);
+    login(result.data.access_token, result.data.user, isChecked, result.data.refresh_token);
     navigate("/", { replace: true });
   };
 
