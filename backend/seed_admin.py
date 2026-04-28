@@ -15,6 +15,8 @@ import sys
 
 from app import create_app, db
 from app.models.user import User
+from app.models.project import Project
+from app.models.project_member import ProjectMember
 
 
 def seed_admin_user():
@@ -23,8 +25,16 @@ def seed_admin_user():
     first_name = os.getenv("ADMIN_FIRST_NAME", "Admin")
     last_name = os.getenv("ADMIN_LAST_NAME", "User")
 
-    if User.query.filter_by(email=email).first():
+    existing = User.query.filter_by(email=email).first()
+    if existing:
         print(f"[skip] admin user already exists: {email}")
+        if not Project.query.filter_by(created_by=existing.id, is_personal=True).first():
+            personal = Project(name="Personal", created_by=existing.id, is_personal=True)
+            db.session.add(personal)
+            db.session.flush()
+            db.session.add(ProjectMember(project_id=personal.id, user_id=existing.id, role="leader"))
+            db.session.commit()
+            print(f"[ok] personal project created for existing admin: {email}")
         return
 
     admin = User(
@@ -35,6 +45,13 @@ def seed_admin_user():
     )
     admin.set_password(password)
     db.session.add(admin)
+    db.session.flush()
+
+    personal = Project(name="Personal", created_by=admin.id, is_personal=True)
+    db.session.add(personal)
+    db.session.flush()
+    db.session.add(ProjectMember(project_id=personal.id, user_id=admin.id, role="leader"))
+
     db.session.commit()
     print(f"[ok] admin user created: {email} (password from env or default)")
 
