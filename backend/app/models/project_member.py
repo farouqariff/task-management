@@ -11,7 +11,7 @@ class ProjectMember(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     project_id = db.Column(db.Integer, db.ForeignKey("projects.id"), nullable=False, index=True)
-    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     role = db.Column(db.String(20), nullable=False, default="member")
     added_at = db.Column(
         db.DateTime(timezone=True),

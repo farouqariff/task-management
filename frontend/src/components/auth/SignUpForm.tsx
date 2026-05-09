@@ -20,6 +20,7 @@ export default function SignUpForm() {
   const [lastNameError, setLastNameError] = useState("");
   const [emailError, setEmailError] = useState("");
   const [passwordError, setPasswordError] = useState("");
+  const [matchPasswordError, setMatchPasswordError] = useState("");
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -29,6 +30,7 @@ export default function SignUpForm() {
     setLastNameError("");
     setEmailError("");
     setPasswordError("");
+    setMatchPasswordError("");
 
     let hasError = false;
     if (!firstName.trim()) {
@@ -47,12 +49,11 @@ export default function SignUpForm() {
       setPasswordError("Please enter password");
       hasError = true;
     }
-    if (hasError) return;
-
     if (password !== confirmPassword) {
       setError("Passwords do not match");
       return;
     }
+    if (hasError) return;
 
     setLoading(true);
     const result = await authApi.register(firstName, lastName, email, password);
@@ -89,11 +90,9 @@ export default function SignUpForm() {
                       value={firstName}
                       onChange={(e) => setFirstName(e.target.value)}
                     />
-                    {firstNameError && (
-                      <p className="mt-1 text-sm text-error-500">
-                        {firstNameError}
-                      </p>
-                    )}
+                    <p className="mt-1 text-sm text-error-500 min-h-[1.25rem]">
+                      {firstNameError}
+                    </p>
                   </div>
                   <div className="sm:col-span-1">
                     <Label>
@@ -105,11 +104,9 @@ export default function SignUpForm() {
                       value={lastName}
                       onChange={(e) => setLastName(e.target.value)}
                     />
-                    {lastNameError && (
-                      <p className="mt-1 text-sm text-error-500">
-                        {lastNameError}
-                      </p>
-                    )}
+                    <p className="mt-1 text-sm text-error-500 min-h-[1.25rem]">
+                      {lastNameError}
+                    </p>
                   </div>
                 </div>
                 <div>
@@ -122,9 +119,9 @@ export default function SignUpForm() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                   />
-                  {emailError && (
-                    <p className="mt-1 text-sm text-error-500">{emailError}</p>
-                  )}
+                  <p className="mt-1 text-sm text-error-500 min-h-[1.25rem]">
+                    {emailError}
+                  </p>
                 </div>
                 <div>
                   <Label>
@@ -148,11 +145,9 @@ export default function SignUpForm() {
                       )}
                     </span>
                   </div>
-                  {passwordError && (
-                    <p className="mt-1 text-sm text-error-500">
-                      {passwordError}
-                    </p>
-                  )}
+                  <p className="mt-1 text-sm text-error-500 min-h-[1.25rem]">
+                    {passwordError}
+                  </p>
                 </div>
                 <div>
                   <Label>
@@ -178,10 +173,13 @@ export default function SignUpForm() {
                       )}
                     </span>
                   </div>
+                  <p className="text-sm text-error-500 min-h-[1.25rem]">
+                    {matchPasswordError}
+                  </p>
                 </div>
-
-                {error && <p className="text-sm text-error-500">{error}</p>}
-
+                <p className="text-sm text-error-500 min-h-[1.25rem]">
+                  {error}
+                </p>
                 <div>
                   <button
                     type="submit"

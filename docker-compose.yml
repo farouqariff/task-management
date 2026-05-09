@@ -11,40 +11,21 @@ services:
     ports:
       - "3306:3306"
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "--password=${MYSQL_ROOT_PASSWORD}"]
+      test:
+        [
+          "CMD",
+          "mysqladmin",
+          "ping",
+          "-h",
+          "localhost",
+          "-u",
+          "root",
+          "--password=${MYSQL_ROOT_PASSWORD}",
+        ]
       interval: 10s
       timeout: 5s
       retries: 15
       start_period: 30s
-
-  backend:
-    build: ./backend
-    environment:
-      DATABASE_URL: mysql+pymysql://root:${MYSQL_ROOT_PASSWORD}@db:3306/${MYSQL_DATABASE}
-      SECRET_KEY: ${SECRET_KEY}
-      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
-      ADMIN_EMAIL: admin@tally.com
-      ADMIN_PASSWORD: "abcd1234*"
-      ADMIN_FIRST_NAME: Admin
-      ADMIN_LAST_NAME: Tally
-      MAIL_USERNAME: ${MAIL_USERNAME}
-      MAIL_PASSWORD: ${MAIL_PASSWORD}
-      FRONTEND_URL: ${FRONTEND_URL:-http://localhost}
-    depends_on:
-      db:
-        condition: service_healthy
-    ports:
-      - "5000:5000"
-
-  frontend:
-    build:
-      context: ./frontend
-      args:
-        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:5000}
-    ports:
-      - "80:80"
-    depends_on:
-      - backend
 
 volumes:
   mysql_data:

@@ -19,6 +19,7 @@ type NavItem = {
   name: string;
   icon: React.ReactNode;
   path?: string;
+  matchPrefix?: string;
   subItems?: { name: string; path: string; pro?: boolean; new?: boolean }[];
 };
 
@@ -32,6 +33,7 @@ const navItems: NavItem[] = [
     icon: <ProjectIcon />,
     name: "Projects",
     path: "/projects",
+    matchPrefix: "/project",
   },
   {
     icon: <UsersIcon />,
@@ -64,6 +66,12 @@ const AppSidebar: React.FC = () => {
     fetchProjects();
   }, []);
 
+  useEffect(() => {
+    const handler = () => fetchProjects();
+    window.addEventListener("project-completed", handler);
+    return () => window.removeEventListener("project-completed", handler);
+  }, []);
+
   const filteredNavItems = navItems.filter(
     (item) =>
       (item.path !== "/users" &&
@@ -82,9 +90,11 @@ const AppSidebar: React.FC = () => {
   );
   const subMenuRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
-  // const isActive = (path: string) => location.pathname === path;
   const isActive = useCallback(
-    (path: string) => location.pathname === path,
+    (path: string, matchPrefix?: string) => {
+      if (matchPrefix) return location.pathname.startsWith(matchPrefix);
+      return location.pathname === path;
+    },
     [location.pathname],
   );
 
@@ -176,12 +186,14 @@ const AppSidebar: React.FC = () => {
               <Link
                 to={nav.path}
                 className={`menu-item group ${
-                  isActive(nav.path) ? "menu-item-active" : "menu-item-inactive"
+                  isActive(nav.path, nav.matchPrefix)
+                    ? "menu-item-active"
+                    : "menu-item-inactive"
                 }`}
               >
                 <span
                   className={`menu-item-icon-size ${
-                    isActive(nav.path)
+                    isActive(nav.path, nav.matchPrefix)
                       ? "menu-item-icon-active"
                       : "menu-item-icon-inactive"
                   }`}

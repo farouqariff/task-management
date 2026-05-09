@@ -15,6 +15,7 @@ import Projects from "./pages/Projects/Index";
 import ProjectDetail from "./pages/Projects/ProjectDetail";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import Unauthorized from "./pages/ErrorPages/Unauthorized";
+import Forbidden from "./pages/ErrorPages/Forbidden";
 
 function PrivateRoute({ children }: { children: ReactNode }) {
   const { isAuthenticated } = useAuth();
@@ -109,6 +110,7 @@ export default function App() {
 
           {/* Fallback */}
           <Route path="/error-401" element={<Unauthorized />} />
+          <Route path="/error-403" element={<Forbidden />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </Router>

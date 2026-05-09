@@ -27,10 +27,8 @@ admin_update_schema = UserAdminUpdateSchema()
 @admin_required
 def create_user():
     data = admin_create_schema.load(request.get_json(silent=True) or {})
-
     alphabet = string.ascii_letters + string.digits
     temp_password = ''.join(secrets.choice(alphabet) for _ in range(12))
-
     user = User(
         first_name=data["first_name"],
         last_name=data["last_name"],
@@ -38,21 +36,18 @@ def create_user():
         is_admin=False,
     )
     user.set_password(temp_password)
-
     try:
         db.session.add(user)
         db.session.flush()
-
         personal = Project(name="Personal", created_by=user.id, is_personal=True)
         db.session.add(personal)
         db.session.flush()
         db.session.add(ProjectMember(project_id=personal.id, user_id=user.id, role="leader"))
-
         write_audit("create", "user", user.id, {"email": user.email}, resource_label=user.email)
         db.session.commit()
     except IntegrityError:
         db.session.rollback()
-        return jsonify({"error": "email already registered"}), 409
+        return jsonify({"error": "Email already registered"}), 409
 
     msg = Message(
         subject="Your Tally Account Has Been Created",
@@ -129,29 +124,24 @@ def update_user(user_id):
         return jsonify({"error": "user not found"}), 404
     if not me_.is_admin and me_.id != user_id:
         return jsonify({"error": "forbidden"}), 403
-
     user = User.query.get(user_id)
     if not user:
         return jsonify({"error": "user not found"}), 404
-
     # Admin editing someone else: no password change allowed
     if me_.is_admin and me_.id != user_id:
         data = admin_update_schema.load(request.get_json(silent=True) or {})
     else:
         data = update_schema.load(request.get_json(silent=True) or {})
-
     if "password" in data:
         user.set_password(data.pop("password"))
     for key, value in data.items():
         setattr(user, key, value)
-
     try:
         write_audit("update", "user", user.id, {k: v for k, v in data.items() if k != "password"}, resource_label=user.email)
         db.session.commit()
     except IntegrityError:
         db.session.rollback()
-        return jsonify({"error": "email already registered"}), 409
-
+        return jsonify({"error": "Email already registered"}), 409
     return jsonify(user_schema.dump(user)), 200
 
 
@@ -185,6 +175,7 @@ def delete_user(user_id):
             .filter(
                 ProjectMember.user_id == user_id,
                 ProjectMember.role == "leader",
+                Project.is_personal == False,
                 ~subq,
             )
             .all()
@@ -195,6 +186,11 @@ def delete_user(user_id):
         return jsonify({
             "error": f"User is the sole leader of: {', '.join(sole_leader_of)}. Reassign the leader before deleting."
         }), 409
+
+    # Delete the user's personal project explicitly (cascades to its tasks, assignees, and members)
+    personal_project = Project.query.filter_by(created_by=user_id, is_personal=True).first()
+    if personal_project:
+        db.session.delete(personal_project)
 
     deleted_email = user.email
     db.session.delete(user)

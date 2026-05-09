@@ -9,7 +9,10 @@ class Config:
     JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", "change-me-jwt")
     SQLALCHEMY_DATABASE_URI = os.getenv("DATABASE_URL")
     SQLALCHEMY_TRACK_MODIFICATIONS = False
-
+    SQLALCHEMY_ENGINE_OPTIONS = {
+        "pool_recycle": 280,
+        "pool_pre_ping": True,
+    }
     MAIL_SERVER = "smtp.gmail.com"
     MAIL_PORT = 587
     MAIL_USE_TLS = True

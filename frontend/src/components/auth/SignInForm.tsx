@@ -47,7 +47,12 @@ export default function SignInForm() {
       return;
     }
 
-    login(result.data.access_token, result.data.user, isChecked, result.data.refresh_token);
+    login(
+      result.data.access_token,
+      result.data.user,
+      isChecked,
+      result.data.refresh_token,
+    );
     navigate("/", { replace: true });
   };
 
@@ -73,7 +78,9 @@ export default function SignInForm() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                   />
-                  {emailError && <p className="mt-1 text-sm text-error-500">{emailError}</p>}
+                  <p className="mt-1 text-sm text-error-500 min-h-[1.25rem]">
+                    {emailError}
+                  </p>
                 </div>
                 <div>
                   <Label>
@@ -97,13 +104,13 @@ export default function SignInForm() {
                       )}
                     </span>
                   </div>
-                  {passwordError && <p className="mt-1 text-sm text-error-500">{passwordError}</p>}
+                  <p className="mt-1 text-sm text-error-500 min-h-[1.25rem]">
+                    {passwordError}
+                  </p>
                 </div>
-
-                {error && (
-                  <p className="text-sm text-error-500">{error}</p>
-                )}
-
+                <p className="text-sm text-error-500 min-h-[1.25rem]">
+                  {error}
+                </p>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <Checkbox checked={isChecked} onChange={setIsChecked} />

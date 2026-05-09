@@ -1,5 +1,5 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useParams } from "react-router";
+import { useParams, useNavigate } from "react-router";
 import PageMeta from "../../components/common/PageMeta";
 import Badge from "../../components/ui/badge/Badge";
 import {
@@ -225,6 +225,7 @@ const TaskSection = memo(function TaskSection({
 export default function ProjectDetail() {
   const { id } = useParams<{ id: string }>();
   const projectId = Number(id);
+  const navigate = useNavigate();
 
   const { user: currentUser } = useAuth();
 
@@ -312,6 +313,16 @@ export default function ProjectDetail() {
     if (result.data) setTasks(result.data);
   };
 
+  const guardCompletedProject = async (): Promise<boolean> => {
+    if (currentUser?.is_admin) return true;
+    const result = await projectsApi.get(projectId);
+    if (result.data?.is_completed) {
+      navigate("/error-403");
+      return false;
+    }
+    return true;
+  };
+
   useEffect(() => {
     Promise.all([
       tasksApi.list(projectId),
@@ -326,6 +337,10 @@ export default function ProjectDetail() {
             "Failed to load",
         );
       } else {
+        if (projectResult.data?.is_completed && !currentUser?.is_admin) {
+          navigate("/error-403");
+          return;
+        }
         if (tasksResult.data) setTasks(tasksResult.data);
         if (membersResult.data) setMembers(membersResult.data);
         if (projectResult.data) setProject(projectResult.data);
@@ -412,6 +427,7 @@ export default function ProjectDetail() {
   };
 
   const handleAddMember = async () => {
+    if (!(await guardCompletedProject())) return;
     setNewMemberError(null);
     if (!newMemberId) {
       setNewMemberError("Please select a user.");
@@ -455,6 +471,7 @@ export default function ProjectDetail() {
   };
 
   const handleCreateTask = async () => {
+    if (!(await guardCompletedProject())) return;
     setTaskError(null);
     if (!taskName.trim()) {
       setTaskError("Task name is required.");
@@ -505,6 +522,7 @@ export default function ProjectDetail() {
   };
 
   const handleEditTaskSave = async () => {
+    if (!(await guardCompletedProject())) return;
     if (!editingTask) return;
     if (!editTaskName.trim()) {
       setEditTaskError("Task name is required.");
@@ -563,6 +581,7 @@ export default function ProjectDetail() {
   };
 
   const handleDeleteMemberConfirm = async () => {
+    if (!(await guardCompletedProject())) return;
     if (!deletingMember) return;
     setDeleteMemberLoading(true);
     setDeleteMemberError("");
@@ -582,6 +601,7 @@ export default function ProjectDetail() {
   };
 
   const toggleTask = useCallback(async (task: TaskItem) => {
+    if (!(await guardCompletedProject())) return;
     const newStatus = task.status === "completed" ? "todo" : "completed";
     setTasks((prev) =>
       prev.map((t) => (t.id === task.id ? { ...t, status: newStatus } : t)),
@@ -590,6 +610,7 @@ export default function ProjectDetail() {
   }, []);
 
   const handleDeleteTask = useCallback(async (task: TaskItem) => {
+    if (!(await guardCompletedProject())) return;
     setTasks((prev) => prev.filter((t) => t.id !== task.id));
     await tasksApi.delete(task.id);
   }, []);
@@ -603,8 +624,8 @@ export default function ProjectDetail() {
       setCompleteError(result.error);
       return;
     }
-    setProject((prev) => (prev ? { ...prev, is_completed: true } : prev));
-    setIsCompleteModalOpen(false);
+    window.dispatchEvent(new CustomEvent("project-completed"));
+    navigate("/tasks");
   };
 
   const handleMarkNotComplete = async () => {
@@ -696,7 +717,7 @@ export default function ProjectDetail() {
                     onClick={isCompleted ? undefined : openMemberModal}
                     disabled={isCompleted}
                   >
-                    Add Member
+                    Add New Member
                   </Button>
                 )
               ) : (
