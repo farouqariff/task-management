@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate } from "react-router";
 import PageMeta from "../../components/common/PageMeta";
 import Badge from "../../components/ui/badge/Badge";
@@ -13,24 +13,22 @@ import {
   TaskCompletedIcon,
 } from "../../icons";
 import Button from "../../components/ui/button/Button";
-import { Modal } from "../../components/ui/modal";
 import { Dropdown } from "../../components/ui/dropdown/Dropdown";
 import { DropdownItem } from "../../components/ui/dropdown/DropdownItem";
 import { useModal } from "../../hooks/useModal";
-import Input from "../../components/form/input/InputField";
-import Label from "../../components/form/Label";
-import Select from "../../components/form/Select";
-import DatePicker from "../../components/form/date-picker";
 import {
   tasksApi,
   projectsApi,
-  usersApi,
   type ProjectItem,
   type TaskItem,
   type ProjectMemberItem,
-  type UserItem,
 } from "../../services/api";
 import { useAuth } from "../../context/AuthContext";
+import CreateTaskModal from "../../components/projects/CreateTaskModal";
+import EditTaskModal from "../../components/projects/EditTaskModal";
+import CreateMemberModal from "../../components/projects/CreateMemberModal";
+import DeleteMemberModal from "../../components/projects/DeleteMemberModal";
+import CompletedWarningModal from "../../components/projects/CompletedWarningModal";
 
 type TabKey = "todo" | "completed" | "team-members";
 
@@ -246,16 +244,6 @@ export default function ProjectDetail() {
     closeModal: closeMemberModal,
   } = useModal();
 
-  const [newMemberSearch, setNewMemberSearch] = useState("");
-  const [newMemberId, setNewMemberId] = useState<number | null>(null);
-  const [newMemberResults, setNewMemberResults] = useState<UserItem[]>([]);
-  const [showNewMemberDropdown, setShowNewMemberDropdown] = useState(false);
-  const [newMemberError, setNewMemberError] = useState<string | null>(null);
-  const [newMemberSaving, setNewMemberSaving] = useState(false);
-  const newMemberDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(
-    null,
-  );
-
   // Project-level manage permission (admin or project leader)
   const isAdmin = currentUser?.is_admin ?? false;
   const isLeader = members.some(
@@ -275,32 +263,16 @@ export default function ProjectDetail() {
     canManageTask(task) ||
     task.assignees.some((a) => a.user_id === currentUser?.id);
 
-  // Add task state
-  const [taskName, setTaskName] = useState("");
-  const [taskPriority, setTaskPriority] = useState<"low" | "medium" | "high">(
-    "low",
-  );
-  const [taskDueDate, setTaskDueDate] = useState("");
-  const [memberSearch, setMemberSearch] = useState("");
-  const [selectedAssignees, setSelectedAssignees] = useState<
-    ProjectMemberItem[]
-  >([]);
-  const [taskError, setTaskError] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
-
   // Edit task state
   const [editingTask, setEditingTask] = useState<TaskItem | null>(null);
-  const [editTaskName, setEditTaskName] = useState("");
-  const [editTaskPriority, setEditTaskPriority] = useState<
-    "low" | "medium" | "high"
-  >("low");
-  const [editTaskDueDate, setEditTaskDueDate] = useState("");
-  const [editTaskAssignees, setEditTaskAssignees] = useState<
-    { user_id: number; user_email: string }[]
-  >([]);
-  const [editTaskMemberSearch, setEditTaskMemberSearch] = useState("");
-  const [editTaskError, setEditTaskError] = useState<string | null>(null);
-  const [editTaskSaving, setEditTaskSaving] = useState(false);
+
+  const openEditTask = useCallback((task: TaskItem) => {
+    setEditingTask(task);
+  }, []);
+
+  const closeEditTask = () => {
+    setEditingTask(null);
+  };
 
   // Delete member state
   const [deletingMember, setDeletingMember] =
@@ -349,28 +321,6 @@ export default function ProjectDetail() {
     });
   }, [projectId]);
 
-  // Members filtered for "Add Task" assignee search
-  const filteredMembers = useMemo(() => {
-    if (!memberSearch.trim()) return [];
-    return members.filter(
-      (m) =>
-        m.user_email.toLowerCase().includes(memberSearch.toLowerCase()) &&
-        !selectedAssignees.some((s) => s.user_id === m.user_id),
-    );
-  }, [members, memberSearch, selectedAssignees]);
-
-  // Members filtered for "Edit Task" assignee search
-  const editFilteredMembers = useMemo(() => {
-    if (!editTaskMemberSearch.trim()) return [];
-    return members.filter(
-      (m) =>
-        m.user_email
-          .toLowerCase()
-          .includes(editTaskMemberSearch.toLowerCase()) &&
-        !editTaskAssignees.some((a) => a.user_id === m.user_id),
-    );
-  }, [members, editTaskMemberSearch, editTaskAssignees]);
-
   const memberTaskCounts = useMemo(() => {
     const counts: Record<number, { todo: number; completed: number }> = {};
     for (const m of members) {
@@ -388,186 +338,10 @@ export default function ProjectDetail() {
     return counts;
   }, [tasks, members]);
 
-  const handleSelectMember = (member: ProjectMemberItem) => {
-    setSelectedAssignees((prev) => [...prev, member]);
-    setMemberSearch("");
-  };
-
-  const handleRemoveMember = (userId: number) => {
-    setSelectedAssignees((prev) => prev.filter((m) => m.user_id !== userId));
-  };
-
-  const handleNewMemberSearch = (value: string) => {
-    setNewMemberSearch(value);
-    setNewMemberId(null);
-    if (newMemberDebounceRef.current)
-      clearTimeout(newMemberDebounceRef.current);
-    if (!value.trim()) {
-      setNewMemberResults([]);
-      setShowNewMemberDropdown(false);
-      return;
-    }
-    newMemberDebounceRef.current = setTimeout(async () => {
-      const result = await usersApi.search(value);
-      if (result.data) {
-        const filtered = result.data.filter(
-          (u) => !u.is_admin && !members.some((m) => m.user_id === u.id),
-        );
-        setNewMemberResults(filtered);
-        setShowNewMemberDropdown(true);
-      }
-    }, 300);
-  };
-
-  const handleSelectNewMember = (user: UserItem) => {
-    setNewMemberId(user.id);
-    setNewMemberSearch(user.email);
-    setNewMemberResults([]);
-    setShowNewMemberDropdown(false);
-  };
-
-  const handleAddMember = async () => {
-    if (!(await guardCompletedProject())) return;
-    setNewMemberError(null);
-    if (!newMemberId) {
-      setNewMemberError("Please select a user.");
-      return;
-    }
-    setNewMemberSaving(true);
-    const result = await projectsApi.addMember(
-      projectId,
-      newMemberId,
-      "member",
-    );
-    if (result.error) {
-      setNewMemberError(result.error);
-      setNewMemberSaving(false);
-      return;
-    }
-    setNewMemberSaving(false);
-    handleMemberModalClose();
+  const handleMemberAdded = () => {
     projectsApi.getMembers(projectId).then((r) => {
       if (r.data) setMembers(r.data);
     });
-  };
-
-  const handleMemberModalClose = () => {
-    setNewMemberSearch("");
-    setNewMemberId(null);
-    setNewMemberResults([]);
-    setShowNewMemberDropdown(false);
-    setNewMemberError(null);
-    closeMemberModal();
-  };
-
-  const handleModalClose = () => {
-    setTaskName("");
-    setTaskPriority("low");
-    setTaskDueDate("");
-    setSelectedAssignees([]);
-    setMemberSearch("");
-    setTaskError(null);
-    closeModal();
-  };
-
-  const handleCreateTask = async () => {
-    if (!(await guardCompletedProject())) return;
-    setTaskError(null);
-    if (!taskName.trim()) {
-      setTaskError("Task name is required.");
-      return;
-    }
-    setSaving(true);
-    const result = await tasksApi.create({
-      name: taskName.trim(),
-      priority: taskPriority,
-      project_id: projectId,
-      ...(taskDueDate ? { due_date: taskDueDate } : {}),
-    });
-    if (result.error) {
-      setTaskError(result.error);
-      setSaving(false);
-      return;
-    }
-    await Promise.all(
-      selectedAssignees.map((a) =>
-        tasksApi.addAssignee(result.data!.id, a.user_id),
-      ),
-    );
-    setSaving(false);
-    handleModalClose();
-    fetchTasks();
-  };
-
-  const openEditTask = useCallback((task: TaskItem) => {
-    setEditingTask(task);
-    setEditTaskName(task.name);
-    setEditTaskPriority(task.priority);
-    setEditTaskDueDate(task.due_date ? task.due_date.split("T")[0] : "");
-    setEditTaskAssignees(
-      task.assignees.map((a) => ({
-        user_id: a.user_id,
-        user_email: a.user_email,
-      })),
-    );
-    setEditTaskMemberSearch("");
-    setEditTaskError(null);
-  }, []);
-
-  const closeEditTask = () => {
-    setEditingTask(null);
-    setEditTaskAssignees([]);
-    setEditTaskMemberSearch("");
-    setEditTaskError(null);
-  };
-
-  const handleEditTaskSave = async () => {
-    if (!(await guardCompletedProject())) return;
-    if (!editingTask) return;
-    if (!editTaskName.trim()) {
-      setEditTaskError("Task name is required.");
-      return;
-    }
-    setEditTaskSaving(true);
-    setEditTaskError(null);
-
-    const isManager = canManageTask(editingTask);
-
-    const updatePayload = isManager
-      ? {
-          name: editTaskName.trim(),
-          priority: editTaskPriority,
-          due_date: editTaskDueDate || null,
-        }
-      : { priority: editTaskPriority };
-
-    const result = await tasksApi.update(editingTask.id, updatePayload);
-    if (result.error) {
-      setEditTaskError(result.error);
-      setEditTaskSaving(false);
-      return;
-    }
-
-    if (isManager) {
-      const originalIds = new Set(editingTask.assignees.map((a) => a.user_id));
-      const newIds = new Set(editTaskAssignees.map((a) => a.user_id));
-      const toAdd = editTaskAssignees.filter(
-        (a) => !originalIds.has(a.user_id),
-      );
-      const toRemove = editingTask.assignees.filter(
-        (a) => !newIds.has(a.user_id),
-      );
-      await Promise.all([
-        ...toAdd.map((a) => tasksApi.addAssignee(editingTask.id, a.user_id)),
-        ...toRemove.map((a) =>
-          tasksApi.removeAssignee(editingTask.id, a.user_id),
-        ),
-      ]);
-    }
-
-    setEditTaskSaving(false);
-    closeEditTask();
-    fetchTasks();
   };
 
   const openDeleteMember = (m: ProjectMemberItem) => {
@@ -659,9 +433,6 @@ export default function ProjectDetail() {
         return PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority];
       });
   }, [tasks, activeTab]);
-
-  // Whether the task being edited allows full management (name, due_date, assignees)
-  const editingTaskIsManager = editingTask ? canManageTask(editingTask) : false;
 
   return (
     <>
@@ -863,452 +634,51 @@ export default function ProjectDetail() {
         </div>
       )}
 
-      {/* Edit Task Modal */}
-      <Modal
-        isOpen={editingTask !== null}
-        onClose={closeEditTask}
-        className="max-w-[584px] m-4"
-      >
-        <div className="relative w-full rounded-3xl bg-white p-6 dark:bg-gray-900">
-          <h4 className="mb-6 text-lg font-semibold text-gray-800 dark:text-white/90">
-            Edit Task
-          </h4>
-          <form className="flex flex-col" onSubmit={(e) => e.preventDefault()}>
-            <div className="grid grid-cols-1 gap-x-5 gap-y-5 sm:grid-cols-2">
-              {editingTaskIsManager && (
-                <div className="sm:col-span-2">
-                  <Label>Name</Label>
-                  <Input
-                    type="text"
-                    placeholder="Enter task name"
-                    value={editTaskName}
-                    onChange={(e) => setEditTaskName(e.target.value)}
-                  />
-                </div>
-              )}
-              <div>
-                <Label>Select Priority</Label>
-                <Select
-                  key={editingTask?.id}
-                  options={[
-                    { value: "low", label: "Low" },
-                    { value: "medium", label: "Medium" },
-                    { value: "high", label: "High" },
-                  ]}
-                  defaultValue={editTaskPriority}
-                  placeholder="Select an option"
-                  onChange={(value) =>
-                    setEditTaskPriority(value as "low" | "medium" | "high")
-                  }
-                  className="dark:bg-dark-900"
-                />
-              </div>
-              {editingTaskIsManager && (
-                <div>
-                  <DatePicker
-                    key={editingTask?.id}
-                    id="edit-date-picker"
-                    label="Due date"
-                    placeholder="Select a date"
-                    defaultDate={editTaskDueDate || undefined}
-                    onChange={(_dates, dateStr) => setEditTaskDueDate(dateStr)}
-                  />
-                </div>
-              )}
-              {editingTaskIsManager && (
-                <div className="sm:col-span-2 relative">
-                  <Label>Assign to</Label>
-                  {editTaskAssignees.length > 0 && (
-                    <div className="mb-2 flex flex-wrap gap-2">
-                      {editTaskAssignees.map((a) => (
-                        <span
-                          key={a.user_id}
-                          className="inline-flex items-center gap-1 rounded-full bg-brand-50 px-3 py-1 text-xs font-medium text-brand-700 dark:bg-brand-500/15 dark:text-brand-400"
-                        >
-                          {a.user_email}
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setEditTaskAssignees((prev) =>
-                                prev.filter((x) => x.user_id !== a.user_id),
-                              )
-                            }
-                            className="ml-1 leading-none text-brand-500 hover:text-brand-700"
-                          >
-                            ×
-                          </button>
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                  <Input
-                    type="text"
-                    placeholder="Search by email"
-                    value={editTaskMemberSearch}
-                    onChange={(e) => setEditTaskMemberSearch(e.target.value)}
-                  />
-                  {editTaskMemberSearch.trim() &&
-                    editFilteredMembers.length > 0 && (
-                      <ul className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg max-h-48 overflow-y-auto">
-                        {editFilteredMembers.map((m) => (
-                          <li
-                            key={m.user_id}
-                            onClick={() => {
-                              setEditTaskAssignees((prev) => [
-                                ...prev,
-                                {
-                                  user_id: m.user_id,
-                                  user_email: m.user_email,
-                                },
-                              ]);
-                              setEditTaskMemberSearch("");
-                            }}
-                            className="px-4 py-2 cursor-pointer text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
-                          >
-                            {m.user_email}
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  {editTaskMemberSearch.trim() &&
-                    editFilteredMembers.length === 0 && (
-                      <div className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg px-4 py-2 text-sm text-gray-500 dark:text-gray-400">
-                        No members found.
-                      </div>
-                    )}
-                </div>
-              )}
-            </div>
-            {editTaskError && (
-              <p className="mt-3 text-sm text-red-500">{editTaskError}</p>
-            )}
-            <div className="mt-6 flex items-center justify-end gap-3">
-              <Button size="sm" variant="outline" onClick={closeEditTask}>
-                Cancel
-              </Button>
-              <Button
-                size="sm"
-                onClick={handleEditTaskSave}
-                disabled={editTaskSaving}
-              >
-                {editTaskSaving ? "Saving..." : "Save Changes"}
-              </Button>
-            </div>
-          </form>
-        </div>
-      </Modal>
-
-      {/* Delete Member Modal */}
-      <Modal
-        isOpen={deletingMember !== null}
+      <DeleteMemberModal
+        member={deletingMember}
         onClose={closeDeleteMember}
-        className="max-w-[507px] m-4"
-      >
-        <div className="relative w-full rounded-3xl bg-white p-6 text-center dark:bg-gray-900 sm:p-10">
-          <div className="mx-auto mb-7 flex h-24 w-24 items-center justify-center">
-            <svg
-              width="96"
-              height="96"
-              viewBox="0 0 96 96"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <g className="fill-error-50 dark:fill-error-500/15">
-                <circle cx="48" cy="24" r="20" />
-                <circle cx="48" cy="72" r="20" />
-                <circle cx="24" cy="48" r="20" />
-                <circle cx="72" cy="48" r="20" />
-                <circle cx="31" cy="31" r="20" />
-                <circle cx="65" cy="31" r="20" />
-                <circle cx="31" cy="65" r="20" />
-                <circle cx="65" cy="65" r="20" />
-              </g>
-              <path
-                d="M37 37L59 59M59 37L37 59"
-                className="stroke-error-500"
-                strokeWidth="4"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </div>
-          <h4 className="mb-3 text-title-sm font-semibold text-gray-800 dark:text-white/90">
-            Danger Alert!
-          </h4>
-          <p className="mx-auto mb-6 max-w-[380px] text-sm text-gray-500 dark:text-gray-400">
-            Are you sure you want to remove{" "}
-            <span className="font-medium text-gray-700 dark:text-gray-300">
-              {deletingMember?.user_full_name}
-            </span>{" "}
-            from this project? This action cannot be undone.
-          </p>
-          {deleteMemberError && (
-            <p className="mb-4 text-sm text-error-500">{deleteMemberError}</p>
-          )}
-          <div className="flex items-center justify-center gap-3">
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={closeDeleteMember}
-              disabled={deleteMemberLoading}
-            >
-              Cancel
-            </Button>
-            <button
-              type="button"
-              onClick={handleDeleteMemberConfirm}
-              disabled={deleteMemberLoading}
-              className="inline-flex items-center justify-center gap-2 rounded-lg bg-error-500 px-4 py-3 text-sm font-medium text-white shadow-theme-xs transition hover:bg-error-600 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {deleteMemberLoading ? "Removing..." : "Remove"}
-            </button>
-          </div>
-        </div>
-      </Modal>
+        onConfirm={handleDeleteMemberConfirm}
+        error={deleteMemberError}
+        loading={deleteMemberLoading}
+      />
 
-      {/* Add Member Modal */}
-      <Modal
+      <CreateMemberModal
         isOpen={isMemberOpen}
-        onClose={handleMemberModalClose}
-        className="max-w-[484px] m-4"
-      >
-        <div className="relative w-full rounded-3xl bg-white p-6 dark:bg-gray-900">
-          <h4 className="mb-6 text-lg font-semibold text-gray-800 dark:text-white/90">
-            Add Member
-          </h4>
-          <form className="flex flex-col" onSubmit={(e) => e.preventDefault()}>
-            <div className="grid grid-cols-1 gap-x-5 gap-y-5">
-              <div className="relative">
-                <Label>Search User</Label>
-                <Input
-                  type="text"
-                  placeholder="Search by email"
-                  value={newMemberSearch}
-                  onChange={(e) => handleNewMemberSearch(e.target.value)}
-                />
-                {showNewMemberDropdown && newMemberResults.length > 0 && (
-                  <ul className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg max-h-48 overflow-y-auto">
-                    {newMemberResults.map((u) => (
-                      <li
-                        key={u.id}
-                        onClick={() => handleSelectNewMember(u)}
-                        className="px-4 py-2 cursor-pointer text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
-                      >
-                        {u.email}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-                {showNewMemberDropdown &&
-                  newMemberResults.length === 0 &&
-                  newMemberSearch.trim() && (
-                    <div className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg px-4 py-2 text-sm text-gray-500 dark:text-gray-400">
-                      No users found.
-                    </div>
-                  )}
-              </div>
-            </div>
-            {newMemberError && (
-              <p className="mt-3 text-sm text-red-500">{newMemberError}</p>
-            )}
-            <div className="mt-6 flex items-center justify-end gap-3">
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={handleMemberModalClose}
-              >
-                Cancel
-              </Button>
-              <Button
-                size="sm"
-                onClick={handleAddMember}
-                disabled={newMemberSaving}
-              >
-                {newMemberSaving ? "Adding..." : "Add"}
-              </Button>
-            </div>
-          </form>
-        </div>
-      </Modal>
+        onClose={closeMemberModal}
+        projectId={projectId}
+        members={members}
+        onMemberAdded={handleMemberAdded}
+        guardCompletedProject={guardCompletedProject}
+      />
 
-      {/* Add Task Modal */}
-      <Modal
+      <CreateTaskModal
         isOpen={isOpen}
-        onClose={handleModalClose}
-        className="max-w-[584px] m-4"
-      >
-        <div className="relative w-full rounded-3xl bg-white p-6 dark:bg-gray-900">
-          <h4 className="mb-6 text-lg font-semibold text-gray-800 dark:text-white/90">
-            New Task
-          </h4>
-          <form className="flex flex-col" onSubmit={(e) => e.preventDefault()}>
-            <div className="grid grid-cols-1 gap-x-5 gap-y-5 sm:grid-cols-2">
-              <div className="sm:col-span-2">
-                <Label>Name</Label>
-                <Input
-                  type="text"
-                  placeholder="Enter task name"
-                  value={taskName}
-                  onChange={(e) => setTaskName(e.target.value)}
-                />
-              </div>
-              <div>
-                <Label>Select Priority</Label>
-                <Select
-                  options={[
-                    { value: "low", label: "Low" },
-                    { value: "medium", label: "Medium" },
-                    { value: "high", label: "High" },
-                  ]}
-                  placeholder="Select an option"
-                  onChange={(value) =>
-                    setTaskPriority(value as "low" | "medium" | "high")
-                  }
-                  className="dark:bg-dark-900"
-                />
-              </div>
-              <div>
-                <DatePicker
-                  id="date-picker"
-                  label="Due date"
-                  placeholder="Select a date"
-                  minDate="today"
-                  onChange={(_dates, dateStr) => setTaskDueDate(dateStr)}
-                />
-              </div>
-              <div className="sm:col-span-2 relative">
-                <Label>Assign to</Label>
-                {selectedAssignees.length > 0 && (
-                  <div className="mb-2 flex flex-wrap gap-2">
-                    {selectedAssignees.map((a) => (
-                      <span
-                        key={a.user_id}
-                        className="inline-flex items-center gap-1 rounded-full bg-brand-50 px-3 py-1 text-xs font-medium text-brand-700 dark:bg-brand-500/15 dark:text-brand-400"
-                      >
-                        {a.user_email}
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveMember(a.user_id)}
-                          className="ml-1 leading-none text-brand-500 hover:text-brand-700"
-                        >
-                          ×
-                        </button>
-                      </span>
-                    ))}
-                  </div>
-                )}
-                <Input
-                  type="text"
-                  placeholder="Search by email"
-                  value={memberSearch}
-                  onChange={(e) => setMemberSearch(e.target.value)}
-                />
-                {memberSearch.trim() && filteredMembers.length > 0 && (
-                  <ul className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg max-h-48 overflow-y-auto">
-                    {filteredMembers.map((m) => (
-                      <li
-                        key={m.user_id}
-                        onClick={() => handleSelectMember(m)}
-                        className="px-4 py-2 cursor-pointer text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
-                      >
-                        {m.user_email}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-                {memberSearch.trim() && filteredMembers.length === 0 && (
-                  <div className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg px-4 py-2 text-sm text-gray-500 dark:text-gray-400">
-                    No members found.
-                  </div>
-                )}
-              </div>
-            </div>
-            {taskError && (
-              <p className="mt-3 text-sm text-red-500">{taskError}</p>
-            )}
-            <div className="mt-6 flex items-center justify-end gap-3">
-              <Button size="sm" variant="outline" onClick={handleModalClose}>
-                Cancel
-              </Button>
-              <Button size="sm" onClick={handleCreateTask} disabled={saving}>
-                {saving ? "Saving..." : "Save"}
-              </Button>
-            </div>
-          </form>
-        </div>
-      </Modal>
+        onClose={closeModal}
+        projectId={projectId}
+        members={members}
+        onTaskCreated={fetchTasks}
+        guardCompletedProject={guardCompletedProject}
+      />
 
-      {/* Mark as Completed Warning Modal */}
-      <Modal
+      <EditTaskModal
+        task={editingTask}
+        isManager={editingTask ? canManageTask(editingTask) : false}
+        onClose={closeEditTask}
+        members={members}
+        onTaskSaved={fetchTasks}
+        guardCompletedProject={guardCompletedProject}
+      />
+
+      <CompletedWarningModal
         isOpen={isCompleteModalOpen}
         onClose={() => {
           setIsCompleteModalOpen(false);
           setCompleteError(null);
         }}
-        className="max-w-[507px] m-4"
-      >
-        <div className="relative w-full rounded-3xl bg-white p-6 text-center dark:bg-gray-900 sm:p-10">
-          <div className="mx-auto mb-7 flex h-24 w-24 items-center justify-center">
-            <svg
-              width="96"
-              height="96"
-              viewBox="0 0 96 96"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <g className="fill-warning-50 dark:fill-warning-500/15">
-                <circle cx="48" cy="24" r="20" />
-                <circle cx="48" cy="72" r="20" />
-                <circle cx="24" cy="48" r="20" />
-                <circle cx="72" cy="48" r="20" />
-                <circle cx="31" cy="31" r="20" />
-                <circle cx="65" cy="31" r="20" />
-                <circle cx="31" cy="65" r="20" />
-                <circle cx="65" cy="65" r="20" />
-              </g>
-              <path
-                d="M48 36V54"
-                className="stroke-warning-500"
-                strokeWidth="4"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-              <circle cx="48" cy="63" r="3.5" className="fill-warning-500" />
-            </svg>
-          </div>
-          <h4 className="mb-3 text-title-sm font-semibold text-gray-800 dark:text-white/90">
-            Warning Alert!
-          </h4>
-          <p className="mx-auto mb-6 max-w-[380px] text-sm text-gray-500 dark:text-gray-400">
-            Are you sure you want to mark this project as completed? Once marked
-            as completed, no further changes can be made.
-          </p>
-          {completeError && (
-            <p className="mb-4 text-sm text-error-500">{completeError}</p>
-          )}
-          <div className="flex items-center justify-center gap-3">
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => {
-                setIsCompleteModalOpen(false);
-                setCompleteError(null);
-              }}
-              disabled={completeLoading}
-            >
-              Cancel
-            </Button>
-            <button
-              type="button"
-              onClick={handleMarkComplete}
-              disabled={completeLoading}
-              className="inline-flex items-center justify-center gap-2 rounded-lg bg-warning-500 px-4 py-3 text-sm font-medium text-white shadow-theme-xs transition hover:bg-warning-600 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {completeLoading ? "Marking..." : "Okay, Got It"}
-            </button>
-          </div>
-        </div>
-      </Modal>
+        onConfirm={handleMarkComplete}
+        error={completeError}
+        loading={completeLoading}
+      />
     </>
   );
 }
