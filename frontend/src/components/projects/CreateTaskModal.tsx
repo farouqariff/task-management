@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Modal } from "../ui/modal";
 import Input from "../form/input/InputField";
 import Label from "../form/Label";
@@ -6,6 +6,7 @@ import Select from "../form/Select";
 import DatePicker from "../form/date-picker";
 import Button from "../ui/button/Button";
 import { tasksApi, type ProjectMemberItem } from "../../services/api";
+import { useAuth } from "../../context/AuthContext";
 
 interface CreateTaskModalProps {
   isOpen: boolean;
@@ -35,6 +36,14 @@ export default function CreateTaskModal({
   >([]);
   const [taskError, setTaskError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const { user: currentUser } = useAuth();
+
+  useEffect(() => {
+    if (!isOpen) return;
+    if (currentUser?.is_admin) return;
+    const self = members.find((m) => m.user_id === currentUser?.id);
+    if (self) setSelectedAssignees([self]);
+  }, [isOpen]);
   const filteredMembers = useMemo(() => {
     if (!memberSearch.trim()) return [];
     return members.filter(

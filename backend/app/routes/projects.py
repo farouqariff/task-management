@@ -122,6 +122,12 @@ def update_project(project_id):
     payload = request.get_json(silent=True) or {}
     leader_id = payload.pop("leader_id", None)
 
+    if project.is_completed:
+        if not me_.is_admin:
+            return jsonify({"error": "project is completed — no changes allowed"}), 403
+        if leader_id is not None or payload != {"is_completed": False}:
+            return jsonify({"error": "project is completed — only uncompleting is allowed"}), 400
+
     if leader_id is not None:
         if not User.query.get(leader_id):
             return jsonify({"error": "leader user not found"}), 404
@@ -204,6 +210,9 @@ def add_member(project_id):
     if not can_manage_project(me_, project):
         return jsonify({"error": "forbidden"}), 403
 
+    if project.is_completed:
+        return jsonify({"error": "project is completed — no changes allowed"}), 400
+
     data = member_create_schema.load(request.get_json(silent=True) or {})
 
     if not User.query.get(data["user_id"]):
@@ -238,6 +247,9 @@ def remove_member(project_id, user_id):
         return jsonify({"error": "project not found"}), 404
     if not can_manage_project(me_, project):
         return jsonify({"error": "forbidden"}), 403
+
+    if project.is_completed:
+        return jsonify({"error": "project is completed — no changes allowed"}), 400
 
     member = ProjectMember.query.filter_by(project_id=project_id, user_id=user_id).first()
     if not member:

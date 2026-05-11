@@ -48,6 +48,7 @@ function formatDate(dateStr: string): string {
 interface TaskRowProps {
   task: TaskItem;
   canEdit: boolean;
+  isProjectCompleted: boolean;
   onEdit: (task: TaskItem) => void;
   onToggle: (task: TaskItem) => void;
   onDelete: (task: TaskItem) => void;
@@ -56,6 +57,7 @@ interface TaskRowProps {
 const TaskRow = memo(function TaskRow({
   task,
   canEdit,
+  isProjectCompleted,
   onEdit,
   onToggle,
   onDelete,
@@ -64,7 +66,7 @@ const TaskRow = memo(function TaskRow({
   return (
     <div className="flex flex-wrap items-center gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3 transition hover:border-gray-300 dark:border-gray-800 dark:bg-white/[0.03] dark:hover:border-gray-700">
       <label
-        className={`flex items-center ${canEdit ? "cursor-pointer" : "cursor-default"}`}
+        className={`flex items-center ${canEdit && !isProjectCompleted ? "cursor-pointer" : "cursor-default"}`}
       >
         <input
           type="checkbox"
@@ -73,7 +75,7 @@ const TaskRow = memo(function TaskRow({
             if (canEdit) onToggle(task);
           }}
           className="peer sr-only"
-          disabled={!canEdit}
+          disabled={!canEdit || isProjectCompleted}
         />
         <span
           className={`flex h-5 w-5 items-center justify-center rounded-md border transition ${
@@ -149,7 +151,8 @@ const TaskRow = memo(function TaskRow({
           <button
             type="button"
             onClick={() => onEdit(task)}
-            className="text-gray-400 transition-colors hover:text-brand-500"
+            disabled={isProjectCompleted}
+            className="text-gray-400 transition-colors hover:text-brand-500 disabled:cursor-not-allowed disabled:opacity-40"
             title="Edit task"
           >
             <PencilIcon className="size-5" />
@@ -159,7 +162,8 @@ const TaskRow = memo(function TaskRow({
         <button
           type="button"
           onClick={() => onDelete(task)}
-          className="text-gray-400 transition-colors hover:text-error-500"
+          disabled={isProjectCompleted}
+          className="text-gray-400 transition-colors hover:text-error-500 disabled:cursor-not-allowed disabled:opacity-40"
           title="Delete task"
         >
           <TrashBinIcon className="size-5" />
@@ -175,6 +179,7 @@ interface TaskSectionProps {
   countColor: "warning" | "info" | "success" | "light";
   tasks: TaskItem[];
   canEdit: (task: TaskItem) => boolean;
+  isProjectCompleted: boolean;
   onEdit: (task: TaskItem) => void;
   onToggle: (task: TaskItem) => void;
   onDelete: (task: TaskItem) => void;
@@ -186,6 +191,7 @@ const TaskSection = memo(function TaskSection({
   countColor,
   tasks,
   canEdit,
+  isProjectCompleted,
   onEdit,
   onToggle,
   onDelete,
@@ -210,6 +216,7 @@ const TaskSection = memo(function TaskSection({
             key={task.id}
             task={task}
             canEdit={canEdit(task)}
+            isProjectCompleted={isProjectCompleted}
             onEdit={onEdit}
             onToggle={onToggle}
             onDelete={onDelete}
@@ -589,7 +596,8 @@ export default function ProjectDetail() {
                             <button
                               type="button"
                               onClick={() => openDeleteMember(m)}
-                              className="text-gray-400 transition-colors hover:text-error-500"
+                              disabled={isCompleted}
+                              className="text-gray-400 transition-colors hover:text-error-500 disabled:cursor-not-allowed disabled:opacity-40"
                               title="Remove member"
                             >
                               <TrashBinIcon className="size-5" />
@@ -609,6 +617,7 @@ export default function ProjectDetail() {
                   countColor="light"
                   tasks={visibleTasks.filter((t) => t.status === "todo")}
                   canEdit={canEditTask}
+                  isProjectCompleted={isCompleted}
                   onEdit={openEditTask}
                   onToggle={toggleTask}
                   onDelete={handleDeleteTask}
@@ -619,6 +628,7 @@ export default function ProjectDetail() {
                   countColor="success"
                   tasks={visibleTasks.filter((t) => t.status === "completed")}
                   canEdit={canEditTask}
+                  isProjectCompleted={isCompleted}
                   onEdit={openEditTask}
                   onToggle={toggleTask}
                   onDelete={handleDeleteTask}

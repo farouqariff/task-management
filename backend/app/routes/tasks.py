@@ -119,6 +119,8 @@ def update_task(task_id):
     task = Task.query.get(task_id)
     if not task:
         return jsonify({"error": "task not found"}), 404
+    if task.project.is_completed:
+        return jsonify({"error": "project is completed — no changes allowed"}), 400
 
     payload = request.get_json(silent=True) or {}
     prev_status = task.status
@@ -166,6 +168,8 @@ def delete_task(task_id):
     task = Task.query.get(task_id)
     if not task:
         return jsonify({"error": "task not found"}), 404
+    if task.project.is_completed:
+        return jsonify({"error": "project is completed — no changes allowed"}), 400
     if not can_manage_task(me_, task):
         return jsonify({"error": "forbidden"}), 403
 
@@ -197,6 +201,8 @@ def add_assignee(task_id):
     task = Task.query.get(task_id)
     if not task:
         return jsonify({"error": "task not found"}), 404
+    if task.project.is_completed:
+        return jsonify({"error": "project is completed — no changes allowed"}), 400
     if not can_manage_task(me_, task):
         return jsonify({"error": "forbidden"}), 403
 
@@ -232,6 +238,8 @@ def remove_assignee(task_id, user_id):
     task = Task.query.get(task_id)
     if not task:
         return jsonify({"error": "task not found"}), 404
+    if task.project.is_completed:
+        return jsonify({"error": "project is completed — no changes allowed"}), 400
     if not can_manage_task(me_, task):
         return jsonify({"error": "forbidden"}), 403
 
