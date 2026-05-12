@@ -1,4 +1,4 @@
-# Tally — Task Management App
+# Task Management App
 
 A full-stack task management application built with React, Flask, and MySQL.
 
