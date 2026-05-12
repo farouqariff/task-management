@@ -127,14 +127,22 @@ def update_task(task_id):
 
     if can_manage_task(me_, task):
         task_schema.load(payload, instance=task, partial=True)
-        if prev_status != "completed" and task.status == "completed" and task.created_by and task.created_by != me_.id:
-            db.session.add(Notification(
-                user_id=task.created_by,
-                type="task",
-                title="Your task was marked complete",
-                message=f'"{task.name}" has been marked as complete',
-                link=f"/project/{task.project_id}",
-            ))
+        if prev_status != "completed" and task.status == "completed":
+            notify_ids = set()
+            for a in task.assignees:
+                if a.user_id != me_.id:
+                    notify_ids.add(a.user_id)
+            for lid in task.project.leader_ids():
+                if lid != me_.id:
+                    notify_ids.add(lid)
+            for uid in notify_ids:
+                db.session.add(Notification(
+                    user_id=uid,
+                    type="task",
+                    title="Task marked as complete",
+                    message=f'"{task.name}" has been marked as complete',
+                    link=f"/project/{task.project_id}",
+                ))
         write_audit("update", "task", task.id, payload, resource_label=task.name)
         db.session.commit()
         return jsonify(task_schema.dump(task)), 200
@@ -148,14 +156,22 @@ def update_task(task_id):
     for key, value in data.items():
         setattr(task, key, value)
 
-    if prev_status != "completed" and task.status == "completed" and task.created_by and task.created_by != me_.id:
-        db.session.add(Notification(
-            user_id=task.created_by,
-            type="task",
-            title="Your task was marked complete",
-            message=f'"{task.name}" has been marked as complete',
-            link=f"/project/{task.project_id}",
-        ))
+    if prev_status != "completed" and task.status == "completed":
+        notify_ids = set()
+        for a in task.assignees:
+            if a.user_id != me_.id:
+                notify_ids.add(a.user_id)
+        for lid in task.project.leader_ids():
+            if lid != me_.id:
+                notify_ids.add(lid)
+        for uid in notify_ids:
+            db.session.add(Notification(
+                user_id=uid,
+                type="task",
+                title="Task marked as complete",
+                message=f'"{task.name}" has been marked as complete',
+                link=f"/project/{task.project_id}",
+            ))
     write_audit("update", "task", task.id, data, resource_label=task.name)
     db.session.commit()
     return jsonify(task_schema.dump(task)), 200
@@ -253,6 +269,7 @@ def remove_assignee(task_id, user_id):
             type="task",
             title="You've been unassigned from a task",
             message=f'You have been removed from "{task.name}" in "{task.project.name}"',
+            link=f"/project/{task.project_id}",
         ))
     db.session.delete(assignee)
     write_audit("remove_assignee", "task", task_id, {"user_id": user_id}, resource_label=task.name)

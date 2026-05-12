@@ -6,8 +6,14 @@ import { notificationsApi, type NotificationItem } from "../../services/api";
 
 const TWENTY_FOUR_HOURS_MS = 24 * 60 * 60 * 1000;
 
+function parseUtc(dateStr: string): Date {
+  return /Z|[+-]\d{2}:?\d{2}$/.test(dateStr)
+    ? new Date(dateStr)
+    : new Date(dateStr + "Z");
+}
+
 function timeAgo(dateStr: string): string {
-  const diff = Date.now() - new Date(dateStr).getTime();
+  const diff = Date.now() - parseUtc(dateStr).getTime();
   const mins = Math.floor(diff / 60000);
   if (mins < 1) return "just now";
   if (mins < 60) return `${mins} min ago`;
@@ -26,7 +32,7 @@ export default function NotificationDropdown() {
       if (!res.data) return;
       const cutoff = Date.now() - TWENTY_FOUR_HOURS_MS;
       setNotifications(
-        res.data.filter((n) => new Date(n.created_at).getTime() > cutoff)
+        res.data.filter((n) => parseUtc(n.created_at).getTime() > cutoff)
       );
     });
   }, []);
@@ -41,10 +47,21 @@ export default function NotificationDropdown() {
     setIsOpen(true);
     const unread = notifications.filter((n) => n.status === "unread");
     if (unread.length > 0) {
-      await Promise.all(unread.map((n) => notificationsApi.markRead(n.id)));
-      setNotifications((prev) =>
-        prev.map((n) => (n.status === "unread" ? { ...n, status: "read" as const } : n))
+      const results = await Promise.allSettled(
+        unread.map((n) => notificationsApi.markRead(n.id))
       );
+      const succeededIds = new Set(
+        unread
+          .filter((_, i) => results[i].status === "fulfilled")
+          .map((n) => n.id)
+      );
+      if (succeededIds.size > 0) {
+        setNotifications((prev) =>
+          prev.map((n) =>
+            succeededIds.has(n.id) ? { ...n, status: "read" as const } : n
+          )
+        );
+      }
     }
   }
 
