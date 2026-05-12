@@ -5,7 +5,6 @@ import DataTable, { Column } from "../../components/tables/DataTable/DataTable";
 import { projectsApi, type ProjectItem } from "../../services/api";
 import { LoadingIcon } from "../../icons";
 import { useModal } from "../../hooks/useModal";
-import { useAuth } from "../../context/AuthContext";
 import DeleteProjectModal from "../../components/projects/DeleteProjectModal";
 import CreateProjectModal from "../../components/projects/CreateProjectModal";
 import EditProjectModal from "../../components/projects/EditProjectModal";
@@ -44,7 +43,6 @@ const searchProject = (row: ProjectItem) => row.name;
 
 export default function Projects() {
   const navigate = useNavigate();
-  const { user: currentUser } = useAuth();
   const [projects, setProjects] = useState<ProjectItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
@@ -111,17 +109,9 @@ export default function Projects() {
           searchable={searchProject}
           onView={(row) => navigate(`/project/${row.id}`)}
           onEdit={(row) => setEditingProject(row)}
-          canEdit={(row) =>
-            currentUser?.is_admin ||
-            row.created_by === currentUser?.id ||
-            row.members.some(
-              (m) => m.user_id === currentUser?.id && m.role === "leader",
-            )
-          }
+          canEdit={(row) => row.permissions?.can_edit ?? false}
           onDelete={(row) => { setDeletingProject(row); setDeleteError(""); }}
-          canDelete={(row) =>
-            currentUser?.is_admin || row.created_by === currentUser?.id
-          }
+          canDelete={(row) => row.permissions?.can_delete ?? false}
           addButtonLabel="Add New Project"
           onAdd={openModal}
         />

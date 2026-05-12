@@ -77,6 +77,10 @@ export default function EditTaskModal({
       setEditTaskError("Task name is required.");
       return;
     }
+    if (isManager && editTaskAssignees.length === 0) {
+      setEditTaskError("Please assign at least one member.");
+      return;
+    }
     setEditTaskSaving(true);
     setEditTaskError(null);
 

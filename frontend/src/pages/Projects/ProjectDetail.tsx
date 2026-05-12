@@ -47,7 +47,8 @@ function formatDate(dateStr: string): string {
 
 interface TaskRowProps {
   task: TaskItem;
-  canEdit: boolean;
+  canToggle: boolean;
+  canManage: boolean;
   isProjectCompleted: boolean;
   onEdit: (task: TaskItem) => void;
   onToggle: (task: TaskItem) => void;
@@ -56,7 +57,8 @@ interface TaskRowProps {
 
 const TaskRow = memo(function TaskRow({
   task,
-  canEdit,
+  canToggle,
+  canManage,
   isProjectCompleted,
   onEdit,
   onToggle,
@@ -66,16 +68,16 @@ const TaskRow = memo(function TaskRow({
   return (
     <div className="flex flex-wrap items-center gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3 transition hover:border-gray-300 dark:border-gray-800 dark:bg-white/[0.03] dark:hover:border-gray-700">
       <label
-        className={`flex items-center ${canEdit && !isProjectCompleted ? "cursor-pointer" : "cursor-default"}`}
+        className={`flex items-center ${canToggle && !isProjectCompleted ? "cursor-pointer" : "cursor-default"}`}
       >
         <input
           type="checkbox"
           checked={completed}
           onChange={() => {
-            if (canEdit) onToggle(task);
+            if (canToggle) onToggle(task);
           }}
           className="peer sr-only"
-          disabled={!canEdit || isProjectCompleted}
+          disabled={!canToggle || isProjectCompleted}
         />
         <span
           className={`flex h-5 w-5 items-center justify-center rounded-md border transition ${
@@ -147,7 +149,7 @@ const TaskRow = memo(function TaskRow({
           ))}
         </div>
 
-        {canEdit && (
+        {canManage && (
           <button
             type="button"
             onClick={() => onEdit(task)}
@@ -159,15 +161,17 @@ const TaskRow = memo(function TaskRow({
           </button>
         )}
 
-        <button
-          type="button"
-          onClick={() => onDelete(task)}
-          disabled={isProjectCompleted}
-          className="text-gray-400 transition-colors hover:text-error-500 disabled:cursor-not-allowed disabled:opacity-40"
-          title="Delete task"
-        >
-          <TrashBinIcon className="size-5" />
-        </button>
+        {canManage && (
+          <button
+            type="button"
+            onClick={() => onDelete(task)}
+            disabled={isProjectCompleted}
+            className="text-gray-400 transition-colors hover:text-error-500 disabled:cursor-not-allowed disabled:opacity-40"
+            title="Delete task"
+          >
+            <TrashBinIcon className="size-5" />
+          </button>
+        )}
       </div>
     </div>
   );
@@ -178,7 +182,8 @@ interface TaskSectionProps {
   count: number;
   countColor: "warning" | "info" | "success" | "light";
   tasks: TaskItem[];
-  canEdit: (task: TaskItem) => boolean;
+  canToggle: (task: TaskItem) => boolean;
+  canManage: (task: TaskItem) => boolean;
   isProjectCompleted: boolean;
   onEdit: (task: TaskItem) => void;
   onToggle: (task: TaskItem) => void;
@@ -190,7 +195,8 @@ const TaskSection = memo(function TaskSection({
   count,
   countColor,
   tasks,
-  canEdit,
+  canToggle,
+  canManage,
   isProjectCompleted,
   onEdit,
   onToggle,
@@ -215,7 +221,8 @@ const TaskSection = memo(function TaskSection({
           <TaskRow
             key={task.id}
             task={task}
-            canEdit={canEdit(task)}
+            canToggle={canToggle(task)}
+            canManage={canManage(task)}
             isProjectCompleted={isProjectCompleted}
             onEdit={onEdit}
             onToggle={onToggle}
@@ -251,24 +258,14 @@ export default function ProjectDetail() {
     closeModal: closeMemberModal,
   } = useModal();
 
-  // Project-level manage permission (admin or project leader)
   const isAdmin = currentUser?.is_admin ?? false;
-  const isLeader = members.some(
-    (m) => m.user_id === currentUser?.id && m.role === "leader",
-  );
-  const canManage = isAdmin || isLeader;
   const isCompleted = project?.is_completed ?? false;
-  // Show dropdown: leaders only when not completed; admin always
-  const showCompleteDropdown = isAdmin || (isLeader && !isCompleted);
+  const canManageProject = project?.permissions?.can_edit ?? false;
+  // Admins can always see the dropdown (including uncomplete); leaders only when not yet completed
+  const showCompleteDropdown = isAdmin || (canManageProject && !isCompleted);
 
-  // Task-level manage permission: admin, project leader, or task creator
-  const canManageTask = (task: TaskItem) =>
-    canManage || task.created_by === currentUser?.id;
-
-  // Show edit button: managers can edit any task; members can only edit tasks they're assigned to
-  const canEditTask = (task: TaskItem) =>
-    canManageTask(task) ||
-    task.assignees.some((a) => a.user_id === currentUser?.id);
+  const canManageTask = (task: TaskItem) => task.permissions?.can_manage ?? false;
+  const canEditTask = (task: TaskItem) => task.permissions?.can_update_status ?? false;
 
   // Edit task state
   const [editingTask, setEditingTask] = useState<TaskItem | null>(null);
@@ -487,7 +484,7 @@ export default function ProjectDetail() {
 
             <div className="flex items-center gap-2">
               {activeTab === "team-members" ? (
-                canManage && (
+                canManageProject && (
                   <Button
                     size="sm"
                     variant="primary"
@@ -592,7 +589,7 @@ export default function ProjectDetail() {
                               {tc.completed}
                             </span>
                           </div>
-                          {canManage && (
+                          {canManageProject && (
                             <button
                               type="button"
                               onClick={() => openDeleteMember(m)}
@@ -616,7 +613,8 @@ export default function ProjectDetail() {
                   count={counts.todo}
                   countColor="light"
                   tasks={visibleTasks.filter((t) => t.status === "todo")}
-                  canEdit={canEditTask}
+                  canToggle={canEditTask}
+                  canManage={canManageTask}
                   isProjectCompleted={isCompleted}
                   onEdit={openEditTask}
                   onToggle={toggleTask}
@@ -627,7 +625,8 @@ export default function ProjectDetail() {
                   count={counts.completed}
                   countColor="success"
                   tasks={visibleTasks.filter((t) => t.status === "completed")}
-                  canEdit={canEditTask}
+                  canToggle={canEditTask}
+                  canManage={canManageTask}
                   isProjectCompleted={isCompleted}
                   onEdit={openEditTask}
                   onToggle={toggleTask}

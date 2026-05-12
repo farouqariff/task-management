@@ -30,6 +30,17 @@ class ProjectSchema(ma.SQLAlchemyAutoSchema):
 
     creator_email = fields.Function(lambda obj: obj.creator.email if obj.creator else None, dump_only=True)
     members = fields.Nested(ProjectMemberSchema, many=True, dump_only=True)
+    permissions = fields.Method("get_permissions", dump_only=True)
+
+    def get_permissions(self, project):
+        from app.utils.auth import current_user, can_manage_project
+        user = current_user()
+        if not user:
+            return None
+        return {
+            "can_edit": can_manage_project(user, project),
+            "can_delete": user.is_admin or project.created_by == user.id,
+        }
 
 
 class ProjectMemberCreateSchema(ma.Schema):

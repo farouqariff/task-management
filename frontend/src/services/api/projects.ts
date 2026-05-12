@@ -17,6 +17,10 @@ export interface ProjectItem {
   is_completed: boolean;
   created_at: string;
   members: ProjectMemberItem[];
+  permissions: {
+    can_edit: boolean;
+    can_delete: boolean;
+  } | null;
 }
 
 export const projectsApi = {

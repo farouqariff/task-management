@@ -22,6 +22,10 @@ export interface TaskItem {
   creator_email: string | null;
   project_name: string;
   assignees: TaskAssigneeItem[];
+  permissions: {
+    can_manage: boolean;
+    can_update_status: boolean;
+  } | null;
 }
 
 export const tasksApi = {

@@ -34,12 +34,23 @@ class TaskSchema(ma.SQLAlchemyAutoSchema):
     creator_email = fields.Function(lambda obj: obj.creator.email if obj.creator else None, dump_only=True)
     project_name = fields.String(attribute="project.name", dump_only=True)
     assignees = fields.Nested(TaskAssigneeSchema, many=True, dump_only=True)
+    permissions = fields.Method("get_permissions", dump_only=True)
+
+    def get_permissions(self, task):
+        from app.utils.auth import current_user, can_manage_task
+        user = current_user()
+        if not user:
+            return None
+        can_mgr = can_manage_task(user, task)
+        return {
+            "can_manage": can_mgr,
+            "can_update_status": can_mgr or task.has_assignee(user.id),
+        }
 
 
 class TaskAssigneeUpdateSchema(ma.Schema):
     """Limited schema used when an assignee updates a task they don't manage."""
     status = fields.String(validate=validate.OneOf(ALLOWED_STATUSES))
-    priority = fields.String(validate=validate.OneOf(ALLOWED_PRIORITIES))
 
 
 class TaskAssigneeCreateSchema(ma.Schema):

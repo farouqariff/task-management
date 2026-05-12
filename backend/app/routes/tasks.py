@@ -144,7 +144,7 @@ def update_task(task_id):
 
     data = assignee_update_schema.load(payload)
     if not data:
-        return jsonify({"error": "status or priority required"}), 400
+        return jsonify({"error": "status required"}), 400
     for key, value in data.items():
         setattr(task, key, value)
 

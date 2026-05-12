@@ -75,6 +75,10 @@ export default function CreateTaskModal({
       setTaskError("Task name is required.");
       return;
     }
+    if (selectedAssignees.length === 0) {
+      setTaskError("Please assign at least one member.");
+      return;
+    }
     setSaving(true);
     const result = await tasksApi.create({
       name: taskName.trim(),

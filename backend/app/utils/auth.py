@@ -49,9 +49,7 @@ def can_view_task(user: User, task: Task) -> bool:
 
 
 def can_manage_task(user: User, task: Task) -> bool:
-    if user.is_admin or task.created_by == user.id:
-        return True
-    return task.project is not None and user.id in task.project.leader_ids()
+    return task.created_by == user.id
 
 
 def write_audit(action: str, resource_type: str, resource_id: int | None, changes: dict | None = None, actor_id: int | None = None, resource_label: str | None = None) -> None:
