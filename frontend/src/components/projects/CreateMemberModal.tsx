@@ -132,9 +132,9 @@ export default function CreateMemberModal({
                 )}
             </div>
           </div>
-          {newMemberError && (
-            <p className="mt-3 text-sm text-red-500">{newMemberError}</p>
-          )}
+          <p className="mt-3 text-sm text-error-500 min-h-[1.25rem]">
+            {newMemberError}
+          </p>
           <div className="mt-6 flex items-center justify-end gap-3">
             <Button size="sm" variant="outline" onClick={handleClose}>
               Cancel

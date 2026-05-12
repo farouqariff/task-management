@@ -95,9 +95,9 @@ export default function NewPasswordForm() {
                       )}
                     </span>
                   </div>
-                  {passwordError && (
-                    <p className="mt-1 text-sm text-error-500">{passwordError}</p>
-                  )}
+                  <p className="mt-1 text-sm text-error-500 min-h-[1.25rem]">
+                    {passwordError}
+                  </p>
                 </div>
 
                 <div>
@@ -122,14 +122,14 @@ export default function NewPasswordForm() {
                       )}
                     </span>
                   </div>
-                  {confirmPasswordError && (
-                    <p className="mt-1 text-sm text-error-500">{confirmPasswordError}</p>
-                  )}
+                  <p className="mt-1 text-sm text-error-500 min-h-[1.25rem]">
+                    {confirmPasswordError}
+                  </p>
                 </div>
 
-                {error && (
-                  <p className="text-sm text-error-500">{error}</p>
-                )}
+                <p className="text-sm text-error-500 min-h-[1.25rem]">
+                  {error}
+                </p>
 
                 <div>
                   <Button className="w-full" size="sm" disabled={loading}>

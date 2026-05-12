@@ -48,9 +48,12 @@ export default function SignUpForm() {
     if (!password) {
       setPasswordError("Please enter password");
       hasError = true;
+    } else if (password.length < 6) {
+      setPasswordError("Password must be at least 6 characters");
+      hasError = true;
     }
     if (password !== confirmPassword) {
-      setError("Passwords do not match");
+      setMatchPasswordError("Passwords do not match");
       return;
     }
     if (hasError) return;
@@ -173,7 +176,7 @@ export default function SignUpForm() {
                       )}
                     </span>
                   </div>
-                  <p className="text-sm text-error-500 min-h-[1.25rem]">
+                  <p className="mt-1 text-sm text-error-500 min-h-[1.25rem]">
                     {matchPasswordError}
                   </p>
                 </div>

@@ -113,7 +113,7 @@ export default function CreateProjectModal({
                   setProjectName(e.target.value)
                 }
               />
-              <p className="text-sm text-error-500 min-h-[1.25rem]">
+              <p className="mt-1 text-sm text-error-500 min-h-[1.25rem]">
                 {projectNameError}
               </p>
             </div>
@@ -147,7 +147,7 @@ export default function CreateProjectModal({
                     No leaders found.
                   </div>
                 )}
-              <p className="text-sm text-error-500 min-h-[1.25rem]">
+              <p className="mt-1 text-sm text-error-500 min-h-[1.25rem]">
                 {leaderError}
               </p>
             </div>

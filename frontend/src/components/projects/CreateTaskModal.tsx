@@ -188,9 +188,9 @@ export default function CreateTaskModal({
               )}
             </div>
           </div>
-          {taskError && (
-            <p className="mt-3 text-sm text-red-500">{taskError}</p>
-          )}
+          <p className="mt-3 text-sm text-error-500 min-h-[1.25rem]">
+            {taskError}
+          </p>
           <div className="mt-6 flex items-center justify-end gap-3">
             <Button size="sm" variant="outline" onClick={handleClose}>
               Cancel

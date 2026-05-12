@@ -233,9 +233,9 @@ export default function EditTaskModal({
               </div>
             )}
           </div>
-          {editTaskError && (
-            <p className="mt-3 text-sm text-red-500">{editTaskError}</p>
-          )}
+          <p className="mt-3 text-sm text-error-500 min-h-[1.25rem]">
+            {editTaskError}
+          </p>
           <div className="mt-6 flex items-center justify-end gap-3">
             <Button size="sm" variant="outline" onClick={closeEditTask}>
               Cancel

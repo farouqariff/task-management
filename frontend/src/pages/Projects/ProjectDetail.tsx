@@ -83,7 +83,9 @@ const TaskRow = memo(function TaskRow({
           className={`flex h-5 w-5 items-center justify-center rounded-md border transition ${
             completed
               ? "border-brand-500 bg-brand-500"
-              : "border-gray-300 bg-transparent dark:border-gray-600"
+              : canToggle
+                ? "border-gray-300 bg-transparent dark:border-gray-600"
+                : "border-gray-200 bg-gray-100 dark:border-gray-700 dark:bg-gray-800"
           }`}
         >
           {completed && (
@@ -149,29 +151,25 @@ const TaskRow = memo(function TaskRow({
           ))}
         </div>
 
-        {canManage && (
-          <button
-            type="button"
-            onClick={() => onEdit(task)}
-            disabled={isProjectCompleted}
-            className="text-gray-400 transition-colors hover:text-brand-500 disabled:cursor-not-allowed disabled:opacity-40"
-            title="Edit task"
-          >
-            <PencilIcon className="size-5" />
-          </button>
-        )}
+        <button
+          type="button"
+          onClick={() => onEdit(task)}
+          disabled={isProjectCompleted}
+          className={`transition-colors hover:text-brand-500 disabled:cursor-not-allowed disabled:opacity-40 ${canManage ? "text-gray-400" : "invisible"}`}
+          title="Edit task"
+        >
+          <PencilIcon className="size-5" />
+        </button>
 
-        {canManage && (
-          <button
-            type="button"
-            onClick={() => onDelete(task)}
-            disabled={isProjectCompleted}
-            className="text-gray-400 transition-colors hover:text-error-500 disabled:cursor-not-allowed disabled:opacity-40"
-            title="Delete task"
-          >
-            <TrashBinIcon className="size-5" />
-          </button>
-        )}
+        <button
+          type="button"
+          onClick={() => onDelete(task)}
+          disabled={isProjectCompleted}
+          className={`transition-colors hover:text-error-500 disabled:cursor-not-allowed disabled:opacity-40 ${canManage ? "text-gray-400" : "invisible"}`}
+          title="Delete task"
+        >
+          <TrashBinIcon className="size-5" />
+        </button>
       </div>
     </div>
   );

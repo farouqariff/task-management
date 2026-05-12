@@ -87,14 +87,14 @@ export default function ResetPasswordForm() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                   />
-                  {emailError && (
-                    <p className="mt-1 text-sm text-error-500">{emailError}</p>
-                  )}
+                  <p className="mt-1 text-sm text-error-500 min-h-[1.25rem]">
+                    {emailError}
+                  </p>
                 </div>
 
-                {error && (
-                  <p className="text-sm text-error-500">{error}</p>
-                )}
+                <p className="text-sm text-error-500 min-h-[1.25rem]">
+                  {error}
+                </p>
 
                 <div>
                   <Button className="w-full" size="sm" disabled={loading}>
